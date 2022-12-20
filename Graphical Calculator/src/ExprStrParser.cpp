@@ -4,7 +4,7 @@ namespace ExprStrParser {
 
 #define pi_str "3.14159265358979323846"
 #define e_str  "2.71828182845904523536"
-const std::map<std::string, std::string> math_consts {{"pi", pi_str}, {"e", e_str}};
+	const std::map<std::string, std::string> math_consts{ {"pi", pi_str}, {"e", e_str} };
 
 #define str_compare(s1, s2) (std::strcmp(s1, s2) == 0)
 
@@ -265,7 +265,7 @@ const std::map<std::string, std::string> math_consts {{"pi", pi_str}, {"e", e_st
 						++level;
 						continue;
 					}
-					if (rit->val == ",") {
+					if (rit->val == "," && level == 0) {
 						curr_node = new Node(*(rit_end-1));
 						curr_node->left = rcalcNode(rit+1, rit_end-2);
 						curr_node->right = rcalcNode(rit_begin+1, rit);
@@ -369,7 +369,7 @@ const std::map<std::string, std::string> math_consts {{"pi", pi_str}, {"e", e_st
 		}else {
 			expression.expr = []() {return std::nanf(""); };
 		}
-		tree.print();
+		//tree.print();
 	}
 
 	void Parser::set_args(const float x) {
