@@ -14,7 +14,7 @@ void Function::updateScreenSize(const int _screen_width, const int _screen_heigh
 	screen_height = _screen_height;
 }
 
-void Function::updateSize(const float _xsize, const float _ysize){
+void Function::setSize(const float _xsize, const float _ysize){
 	xsize = _xsize;
 	ysize = _ysize;
 	needs_update = true;
@@ -50,21 +50,7 @@ glm::vec2 Function::getCenterNDC() const {
 	return (glm::vec2(xcenter, ycenter)+1.0f)/2.0f;
 }
 
-//#include <thread>
-//void Function::recalculate_points_thread() {
-//	const float indent = 1.0f/(static_cast<float>(calc_points_count)/2.0f);
-//	//std::cout<<indent<<std::endl;
-//	float left = -xcenter-1.0f-indent;
-//	//std::cout<<xsize<<" "<<ysize<<std::endl;
-//	for (int i = 0; i<calc_points_count+2; i++) {
-//		points[i] = glm::vec2((-1.0f-indent+static_cast<float>(i)*indent), (expr_str_parser.calculate(left * xsize)/ysize));
-//		//std::cout<<-1.0f-indent+static_cast<float>(i)*indent<<std::endl;
-//		//std::cout<<"x:" << points.back().x << " y:" << points.back().y <<std::endl;
-//		left += indent;
-//	}
-//}
-
-void Function::recalculatePoints(){
+void Function::recalculatePoints() {
 	//std::thread points_calc_thread(&Function::recalculate_points_thread, this); //using a thread is slower !!!!!?!!?!!	(how to thread?)
 	//points_calc_thread.join();
 
@@ -79,3 +65,20 @@ void Function::recalculatePoints(){
 		left += indent;
 	}
 }
+
+//#include <thread>
+//void Function::recalculate_points_thread(const std::function<void(GLuint)>& callback, const GLuint vbo) {
+//	const float indent = 1.0f/(static_cast<float>(calc_points_count)/2.0f);
+//	//std::cout<<indent<<std::endl;
+//	float left = -xcenter-1.0f-indent;
+//	//std::cout<<xsize<<" "<<ysize<<std::endl;
+//	for (int i = 0; i<calc_points_count+2; i++) {
+//		points[i] = glm::vec2((-1.0f-indent+static_cast<float>(i)*indent), (expr_str_parser.calculate(left * xsize)/ysize));
+//		//std::cout<<-1.0f-indent+static_cast<float>(i)*indent<<std::endl;
+//		//std::cout<<"x:" << points.back().x << " y:" << points.back().y <<std::endl;
+//		left += indent;
+//	}
+//	callback(vbo);
+//}
+
+

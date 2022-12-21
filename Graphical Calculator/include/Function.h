@@ -1,6 +1,9 @@
 #pragma once
 
 #include <glm/glm.hpp>
+
+#include <myGL/VBO.h>
+
 #include <iostream>
 #include <vector>
 #include <functional>
@@ -22,7 +25,7 @@ private:
 
 	ExprStrParser::Parser expr_str_parser;
 
-	void recalculate_points_thread();
+	//void recalculate_points_thread(const std::function<void(GLuint)>& callback, const GLuint vbo);
 public:
 	inline static int float_precision = 1;
 	bool needs_update;
@@ -32,7 +35,7 @@ public:
 	
 	void setFunction(std::string& str);
 	void updateScreenSize(int _screen_width, int _screen_height);
-	void updateSize(float _xsize, float _ysize);
+	void setSize(float _xsize, float _ysize);
 	void multSize(const float delta_xsize, const float delta_ysize);
 	glm::vec2 getSize() const;
 	void setCenter(float _xcenter, float _ycenter);

@@ -14,6 +14,7 @@
 #include <iomanip>
 #include <sstream>
 #include <string> 
+#include <future>
 
 #include "../include/Function.h"
 
@@ -226,6 +227,20 @@ int main() {
 
     constexpr float buttonsInc = 0.15f;
 
+    auto remap_vbo = [](GLuint _vbo) {
+        VBO::bind(_vbo);
+        void* ptr = glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
+        memcpy(ptr, function.points.data(), func_points_count*sizeof(glm::vec2)); //copy points data to vbo
+        glUnmapBuffer(GL_ARRAY_BUFFER);
+    };
+
+    //function.recalculatePoints();
+    //std::thread th(std::ref(remap_vbo), vbo); //cant do this, because different thread cant execute callback on main thread
+
+    std::vector<std::future<void>> futures;
+    futures.push_back({ std::async(std::launch::async, [] {function.recalculatePoints(); }) });
+    bool need_remap_vbo = false;
+
     while (!glfwWindowShouldClose(window)) {
         processInput(window);
 
@@ -241,6 +256,10 @@ int main() {
 
         ImGui::Begin("Settings");
         {
+            if (ImGui::Button("Home")) {
+                function.setSize(10.0f, 10.0f);
+                function.setCenter(0.0f, 0.0f);
+            }
             if (ImGui::Button("+")) {
                 function.multSize(1.0f-buttonsInc, 1.0f-buttonsInc);
             }
@@ -272,29 +291,51 @@ int main() {
             update_func = true;
         }
 
-    	if (function.needs_update) {
-    		coordAxisShader.use();
-    		coordAxisShader.setVec2("center", function.getCenter().x, function.getCenter().y);
-    		funcShader.use();
+        if (function.needs_update) {
+            futures.push_back({ std::async(std::launch::async, [] {function.recalculatePoints(); }) });
+            function.needs_update = false;
+        }
+        for(auto it = futures.begin();it<futures.end();) {
+	        if(it->_Is_ready()) { //if future is ready, remap vbo and remove the future from vector
+                it = futures.erase(it);
+                need_remap_vbo = true;
+	        }else {
+                ++it;
+	        }
+        }
+        if(need_remap_vbo) {
+            coordAxisShader.use();
+            coordAxisShader.setVec2("center", function.getCenter().x, function.getCenter().y);
+            funcShader.use();
             funcShader.setFloat("ycenter", function.getCenter().y);
-            //std::cout<<mouse_unpressed<<std::endl;
-            //glm::vec2 curr_func_size = function.getSize();
-            if (abs(lastX-last_updated_mouse_x)>=mouse_move_update_threshold || abs(lastY-last_updated_mouse_y)>=mouse_move_update_threshold || wheel_scrolled || mouse_unpressed
-                /*|| abs(curr_func_size.x-last_updated_size_x)>=size_update_threshold || abs(curr_func_size.y-last_updated_size_y)>=size_update_threshold*/) {
-                function.recalculatePoints();
-                last_updated_mouse_x = lastX;
-                last_updated_mouse_y = lastY;
-                //last_updated_size_x = curr_func_size.x;
-                //last_updated_size_y = curr_func_size.y;
-                last_centerx = function.getCenter().x;
-                wheel_scrolled = false;
-                mouse_unpressed = false;
-                funcShader.setFloat("xmove", 0.0f);
-            } else {
-                funcShader.setFloat("xmove", function.getCenter().x-last_centerx);
-            }
-    		function.needs_update = false;
-    	}
+            remap_vbo(vbo);
+            need_remap_vbo = false;
+        }
+
+    	//if (function.needs_update) {
+    	//	coordAxisShader.use();
+    	//	coordAxisShader.setVec2("center", function.getCenter().x, function.getCenter().y);
+    	//	funcShader.use();
+        //    funcShader.setFloat("ycenter", function.getCenter().y);
+        //    //std::cout<<mouse_unpressed<<std::endl;
+        //    //glm::vec2 curr_func_size = function.getSize();
+        //    if (abs(lastX-last_updated_mouse_x)>=mouse_move_update_threshold || abs(lastY-last_updated_mouse_y)>=mouse_move_update_threshold || wheel_scrolled || mouse_unpressed
+        //        /*|| abs(curr_func_size.x-last_updated_size_x)>=size_update_threshold || abs(curr_func_size.y-last_updated_size_y)>=size_update_threshold*/) {
+        //        function.recalculatePoints();
+        //        recalculatePointsCallback(vbo);
+        //        last_updated_mouse_x = lastX;
+        //        last_updated_mouse_y = lastY;
+        //        //last_updated_size_x = curr_func_size.x;
+        //        //last_updated_size_y = curr_func_size.y;
+        //        last_centerx = function.getCenter().x;
+        //        wheel_scrolled = false;
+        //        mouse_unpressed = false;
+        //        funcShader.setFloat("xmove", 0.0f);
+        //    } else {
+        //        funcShader.setFloat("xmove", function.getCenter().x-last_centerx);
+        //    }
+    	//	function.needs_update = false;
+    	//}
 
 
     	glLineWidth(1);
@@ -303,11 +344,6 @@ int main() {
         glDrawArrays(GL_POINTS, 0, 1);
 
         RenderAxisNumbers(coordAxisNumbersShader, function.getCenter(), function.getSize(), 0.25f, glm::vec3(0.7f));
-
-    	VBO::bind(vbo);
-    	void* ptr = glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
-    	memcpy(ptr, function.points.data(), func_points_count*sizeof(glm::vec2)); //copy points data to vbo
-    	glUnmapBuffer(GL_ARRAY_BUFFER);
 
         glLineWidth(3);
         VAO::bind(vao);
