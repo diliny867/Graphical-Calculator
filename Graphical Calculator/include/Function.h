@@ -9,6 +9,7 @@
 #include <functional>
 #include <sstream>
 #include <string>
+#include <mutex>
 #include "ExprStrParser.h"
 
 //we assume half of the screen is xsize and ysize
@@ -24,6 +25,8 @@ private:
 	const int calc_points_count = 1600; //keep as multiple of 200
 
 	ExprStrParser::Parser expr_str_parser;
+
+	std::mutex m;
 
 	//void recalculate_points_thread(const std::function<void(GLuint)>& callback, const GLuint vbo);
 public:
