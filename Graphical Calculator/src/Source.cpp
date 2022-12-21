@@ -280,7 +280,7 @@ int main() {
             }
             if (ImGui::InputText("Input function", &inputData)) {
                 function.setFunction(inputData);
-                function.recalculatePoints();
+                futures.push_back({ std::async(std::launch::async, [] {function.recalculatePoints(); }) });
             }
         }
         ImGui::End();
