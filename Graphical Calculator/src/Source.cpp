@@ -51,10 +51,11 @@ bool wheel_scrolled = false;
 bool mouse_unpressed = false;
 
 //assign values for update thresholds
+/* currently unused
 float last_updated_mouse_x = lastX;
 float last_updated_mouse_y = lastY;
 constexpr float mouse_move_update_threshold = 10.0f; //px
-/*
+
 float last_updated_size_x = 20.0f;
 float last_updated_size_y = 20.0f;
 constexpr float size_update_threshold = 0.1f; // %/100
@@ -80,6 +81,52 @@ std::map<GLchar, Character> Characters;
 GLuint characterVAO, characterVBO;
 
 bool update_func = true;
+
+namespace RenderAxisNumbersPrecision {
+    int xprecision = Function::float_precision;
+    int yprecision = Function::float_precision;
+    auto xformatting = std::fixed;
+    auto yformatting = std::fixed;
+
+    void updatePrecision() {
+        xprecision = Function::float_precision;
+        yprecision = Function::float_precision;
+        xformatting = std::fixed;
+        yformatting = std::fixed;
+        const glm::vec2 f_size = function.getSize();
+        if (f_size.x<2.0f) {
+            xprecision += 1;
+            if (f_size.x<0.4f) {
+                xprecision += 1;
+                if (f_size.x<0.01f) {
+                    xprecision = 0;
+                    xformatting = std::scientific;
+                }
+            }
+        } else if (f_size.x>500.0f) {
+            xprecision = 0;
+            if (f_size.x>10000.0f) {
+                xformatting = std::scientific;
+            }
+        }
+
+        if (f_size.y<2.0f) {
+            yprecision += 1;
+            if (f_size.y<0.4f) {
+                yprecision += 1;
+                if (f_size.y<0.01f) {
+                    yprecision = 0;
+                    yformatting = std::scientific;
+                }
+            }
+        } else if (f_size.y>500.0f) {
+            yprecision = 0;
+            if (f_size.y>10000.0f) {
+                yformatting = std::scientific;
+            }
+        }
+    }
+}
 
 int main() {
     // glfw: initialize and configure
@@ -117,6 +164,8 @@ int main() {
 	//glDepthFunc(GL_LESS);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glEnable(GL_LINE_SMOOTH);
+    glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
 
     { //FreeType
         FT_Library ft;
@@ -189,7 +238,7 @@ int main() {
 
     //Shader shader("shaders/shader_vs.glsl", "shaders/shader_fs.glsl");
 	//Shader funcShader("resources/shaders/shader_vs.glsl", "resources/shaders/shader_gs.glsl", "resources/shaders/shader_fs.glsl");
-	Shader funcShader("resources/shaders/shader2_vs.glsl", "resources/shaders/shader2_fs.glsl");
+	Shader funcShader("resources/shaders/shader2_vs.glsl", "resources/shaders/shader2_gs.glsl", "resources/shaders/shader2_fs.glsl");
 	Shader coordAxisShader("resources/shaders/coordAxisShader_vs.glsl", "resources/shaders/coordAxisShader_gs.glsl", "resources/shaders/coordAxisShader_fs.glsl");
 	Shader coordAxisNumbersShader("resources/shaders/coordAxisNumbersShader_vs.glsl", "resources/shaders/coordAxisNumbersShader_fs.glsl");
 
@@ -232,6 +281,7 @@ int main() {
         void* ptr = glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
         memcpy(ptr, function.points.data(), func_points_count*sizeof(glm::vec2)); //copy points data to vbo
         glUnmapBuffer(GL_ARRAY_BUFFER);
+        //VBO::setSubData(_vbo, 0, static_cast<GLsizeiptr>(func_points_count*sizeof(glm::vec2)), function.points.data()); //what is faster?
     };
 
     //function.recalculatePoints();
@@ -259,24 +309,31 @@ int main() {
             if (ImGui::Button("Home")) {
                 function.setSize(10.0f, 10.0f);
                 function.setCenter(0.0f, 0.0f);
+                RenderAxisNumbersPrecision::updatePrecision();
             }
             if (ImGui::Button("+")) {
                 function.multSize(1.0f-buttonsInc, 1.0f-buttonsInc);
+                RenderAxisNumbersPrecision::updatePrecision();
             }
             if (ImGui::Button("-")) {
                 function.multSize(1.0f+buttonsInc, 1.0f+buttonsInc);
+                RenderAxisNumbersPrecision::updatePrecision();
             }
             if (ImGui::Button("X +")) {
                 function.multSize(1.0f-buttonsInc, 1.0f);
+                RenderAxisNumbersPrecision::updatePrecision();
             }
             if (ImGui::Button("X -")) {
                 function.multSize(1.0f+buttonsInc, 1.0f);
+                RenderAxisNumbersPrecision::updatePrecision();
             }
             if (ImGui::Button("Y +")) {
                 function.multSize(1.0f, 1.0f-buttonsInc);
+                RenderAxisNumbersPrecision::updatePrecision();
             }
             if (ImGui::Button("Y -")) {
                 function.multSize(1.0f, 1.0f+buttonsInc);
+                RenderAxisNumbersPrecision::updatePrecision();
             }
             if (ImGui::InputText("Input function", &inputData)) {
                 function.setFunction(inputData);
@@ -348,7 +405,7 @@ int main() {
         glLineWidth(3);
         VAO::bind(vao);
         funcShader.use();
-        glDrawArrays(GL_LINE_STRIP, 0, static_cast<GLsizei>(func_points_count));
+        glDrawArrays(GL_LINE_STRIP_ADJACENCY, 0, static_cast<GLsizei>(func_points_count));
         
 
         ImGui::Render();
@@ -423,6 +480,8 @@ void mouse_scroll_callback(GLFWwindow* window, const double xoffset, const doubl
         function.incCenter( -(lastX/static_cast<float>(SCR_WIDTH) -function.getCenterNDC().x)*(static_cast<float>(yoffset)/10.0f),
 							-(lastY/static_cast<float>(SCR_HEIGHT)-function.getCenterNDC().y)*(static_cast<float>(yoffset)/10.0f));
         function.multSize((1.0f-static_cast<float>(yoffset)/20.0f), (1.0f-static_cast<float>(yoffset)/20.0f));
+
+        RenderAxisNumbersPrecision::updatePrecision();
     }
 }
 
@@ -430,48 +489,13 @@ void RenderAxisNumbers(const Shader& shader, const glm::vec2 center, const glm::
 	const glm::vec2 interval = size/5.0f;
 
     std::stringstream ss;
-    int xprecision = Function::float_precision;
-    int yprecision = Function::float_precision;
-    auto xformatting = std::fixed;
-    auto yformatting = std::fixed;
-    if (size.x<2.0f) {
-        xprecision += 1;
-        if (size.x<0.4f) {
-            xprecision += 1;
-            if (size.x<0.01f) {
-                xprecision = 0;
-                xformatting = std::scientific;
-            }
-        }
-    } else if (size.x>500.0f) {
-        xprecision = 0;
-        if (size.x>10000.0f) {
-            xformatting = std::scientific;
-        }
-    }
-
-    if (size.y<2.0f) {
-        yprecision += 1;
-        if (size.y<0.4f) {
-            yprecision += 1;
-            if (size.y<0.01f) {
-                yprecision = 0;
-                yformatting = std::scientific;
-            }
-        }
-    } else if (size.y>500.0f) {
-        yprecision = 0;
-        if (size.y>10000.0f) {
-            yformatting = std::scientific;
-        }
-    }
 
     for(int i = -10;i<10;i++) {
         ss.str("");
-        ss << xformatting << std::setprecision(xprecision) << interval.x*(static_cast<float>(i)-center.x*10.0f)/2.0f;
+        ss << RenderAxisNumbersPrecision::xformatting << std::setprecision(RenderAxisNumbersPrecision::xprecision) << interval.x*(static_cast<float>(i)-center.x*10.0f)/2.0f;
         RenderText(shader, ss.str(), static_cast<float>(i+10)/20.0f*SCR_WIDTH, (1.0f-(center.y+1.0f)/2.0f)*SCR_HEIGHT, scale , color);
         ss.str("");
-        ss << yformatting << std::setprecision(yprecision) << interval.y*(static_cast<float>(i)+center.y*10.0f)/2.0f;
+        ss << RenderAxisNumbersPrecision::yformatting << std::setprecision(RenderAxisNumbersPrecision::yprecision) << interval.y*(static_cast<float>(i)+center.y*10.0f)/2.0f;
         RenderText(shader, ss.str(), ((center.x+1.0f)/2.0f)*SCR_WIDTH, static_cast<float>(i+10)/20.0f*SCR_HEIGHT, scale, color);
     }
 }

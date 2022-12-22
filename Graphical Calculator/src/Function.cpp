@@ -51,17 +51,11 @@ glm::vec2 Function::getCenterNDC() const {
 }
 
 void Function::recalculatePoints() {
-	//std::thread points_calc_thread(&Function::recalculate_points_thread, this); //using a thread is slower !!!!!?!!?!!	(how to thread?)
-	//points_calc_thread.join();
-	std::lock_guard lg(m);
 	const float indent = 1.0f/(static_cast<float>(calc_points_count)/2.0f);
-	//std::cout<<indent<<std::endl;
 	float left = -xcenter-1.0f-indent;
-	//std::cout<<xsize<<" "<<ysize<<std::endl;
+	std::lock_guard lg(m);
 	for (int i = 0; i<calc_points_count+2; i++) {
 		points[i] = glm::vec2((-1.0f-indent+static_cast<float>(i)*indent), (expr_str_parser.calculate(left * xsize)/ysize));
-		//std::cout<<-1.0f-indent+static_cast<float>(i)*indent<<std::endl;
-		//std::cout<<"x:" << points.back().x << " y:" << points.back().y <<std::endl;
 		left += indent;
 	}
 }
