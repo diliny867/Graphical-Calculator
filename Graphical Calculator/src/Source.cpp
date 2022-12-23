@@ -82,6 +82,7 @@ public:
     Function function;
     std::string inputData;
     std::vector<std::future<void>> futures;
+    glm::vec3 color = glm::vec3(1.0f);
     GLuint vbo = 0;
     GLuint vao = 0;
     bool need_remap_vbo = false;
@@ -176,6 +177,8 @@ int main() {
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glEnable(GL_LINE_SMOOTH);
     glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
+
+    srand(static_cast<unsigned int>(time(NULL)));
 
     { //FreeType
         FT_Library ft;
@@ -280,6 +283,14 @@ int main() {
 
     constexpr float buttonsInc = 0.15f;
 
+    //add first function
+    functions.push_back(new FuncData());
+    VBO::generate(functions.back()->vbo, static_cast<GLsizeiptr>(Function::calc_points_count*sizeof(glm::vec2)), functions.back()->function.points.data(), GL_DYNAMIC_DRAW);
+    VAO::generate(functions.back()->vao);
+    VAO::bind(functions.back()->vao);
+    VAO::addAttrib(functions.back()->vao, 0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
+    functions.back()->color = glm::vec3(static_cast<float>(rand())/(RAND_MAX), static_cast<float>(rand())/(RAND_MAX), static_cast<float>(rand())/(RAND_MAX));
+
     while (!glfwWindowShouldClose(window)) {
         processInput(window);
 
@@ -304,6 +315,7 @@ int main() {
                 }
                 RenderAxisNumbersPrecision::updatePrecision();
             }
+            ImGui::SameLine();
             if (ImGui::Button("+")) {
 	            Function::multSize(1.0f-buttonsInc, 1.0f-buttonsInc);
                 need_update_shaders = true;
@@ -312,6 +324,7 @@ int main() {
                 }
                 RenderAxisNumbersPrecision::updatePrecision();
             }
+            ImGui::SameLine();
             if (ImGui::Button("-")) {
 	            Function::multSize(1.0f+buttonsInc, 1.0f+buttonsInc);
                 need_update_shaders = true;
@@ -328,6 +341,7 @@ int main() {
                 }
                 RenderAxisNumbersPrecision::updatePrecision();
             }
+            ImGui::SameLine();
             if (ImGui::Button("X -")) {
 	            Function::multSize(1.0f+buttonsInc, 1.0f);
                 need_update_shaders = true;
@@ -336,6 +350,7 @@ int main() {
                 }
                 RenderAxisNumbersPrecision::updatePrecision();
             }
+            ImGui::SameLine();
             if (ImGui::Button("Y +")) {
                 Function::multSize(1.0f, 1.0f-buttonsInc);
                 need_update_shaders = true;
@@ -344,6 +359,7 @@ int main() {
                 }
                 RenderAxisNumbersPrecision::updatePrecision();
             }
+            ImGui::SameLine();
             if (ImGui::Button("Y -")) {
                 Function::multSize(1.0f, 1.0f+buttonsInc);
                 need_update_shaders = true;
@@ -352,14 +368,16 @@ int main() {
                 }
                 RenderAxisNumbersPrecision::updatePrecision();
             }
-            if (ImGui::Button("+ function")) {
+            if (ImGui::Button("Add function")) {
                 functions.push_back(new FuncData());
                 VBO::generate(functions.back()->vbo, static_cast<GLsizeiptr>(Function::calc_points_count*sizeof(glm::vec2)), functions.back()->function.points.data(), GL_DYNAMIC_DRAW);
                 VAO::generate(functions.back()->vao);
                 VAO::bind(functions.back()->vao);
                 VAO::addAttrib(functions.back()->vao, 0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
+                functions.back()->color = glm::vec3(static_cast<float>(rand())/(RAND_MAX), static_cast<float>(rand())/(RAND_MAX), static_cast<float>(rand())/(RAND_MAX));
             }
-            if (ImGui::Button("- function")) {
+            ImGui::SameLine();
+            if (ImGui::Button("Remove function")) {
                 if (!functions.empty()) {
                     VBO::deleteIt(functions.back()->vbo);
                     VAO::deleteIt(functions.back()->vao);
@@ -367,10 +385,12 @@ int main() {
                 }
             }
             for(std::size_t i=0; i<functions.size(); i++) {
+                //ImGui::ColorPicker3(std::string("Color "+std::to_string(i+1)).c_str(), value_ptr(functions[i]->color));
                 if (ImGui::InputText(std::string("Function "+std::to_string(i+1)).c_str(), &functions[i]->inputData)) {
                     functions[i]->function.setFunction(functions[i]->inputData);
                     functions[i]->futures.push_back({ std::async(std::launch::async, [&, i] {functions[i]->function.recalculatePoints(); }) });
                 }
+                
             }
         }
         ImGui::End();
@@ -421,6 +441,7 @@ int main() {
             }
 
             VAO::bind(functions[i]->vao);
+            funcShader.setVec3("color", functions[i]->color);
             glDrawArrays(GL_LINE_STRIP_ADJACENCY, 0, static_cast<GLsizei>(Function::calc_points_count));
         }
 
