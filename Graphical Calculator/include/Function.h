@@ -12,17 +12,11 @@
 #include <mutex>
 #include "ExprStrParser.h"
 
-//we assume half of the screen is xsize and ysize
 class Function{
 private:
-	int screen_width;
-	int screen_height;
-	float xsize;
-	float ysize;
-	float xcenter;
-	float ycenter;
+	
 
-	const int calc_points_count = 1600; //keep as multiple of 200
+	
 
 	ExprStrParser::Parser expr_str_parser;
 
@@ -31,20 +25,31 @@ private:
 	//void recalculate_points_thread(const std::function<void(GLuint)>& callback, const GLuint vbo);
 public:
 	inline static int float_precision = 1;
+
+	inline static int screen_width = 800;
+	inline static int screen_height = 600;
+	inline static float xsize = 10.0f;
+	inline static float ysize = 10.0f;
+	inline static float xcenter = 0.0f;
+	inline static float ycenter = 0.0f;
+
+	const inline static int calc_points_count = 1600; //keep as multiple of 200
+
 	bool needs_update;
 	Function();
 	Function(int _screen_width, int _screen_height);
 	std::vector<glm::vec2>points;
 	
 	void setFunction(std::string& str);
-	void updateScreenSize(int _screen_width, int _screen_height);
-	void setSize(float _xsize, float _ysize);
-	void multSize(const float delta_xsize, const float delta_ysize);
-	glm::vec2 getSize() const;
-	void setCenter(float _xcenter, float _ycenter);
-	void incCenter(const float delta_xcenter, const float delta_ycenter);
-	void multCenter(const float delta_xcenter, const float delta_ycenter);
-	glm::vec2 getCenter() const;
-	glm::vec2 getCenterNDC() const;
+	static void setScreenSize(int _screen_width, int _screen_height);
+	static void setSize(float _xsize, float _ysize);
+	static void multSize(const float delta_xsize, const float delta_ysize);
+	static glm::vec2 getSize();
+	static void setCenter(float _xcenter, float _ycenter);
+	static void incCenter(const float delta_xcenter, const float delta_ycenter);
+	static void multCenter(const float delta_xcenter, const float delta_ycenter);
+	static glm::vec2 getCenter();
+	static glm::vec2 getCenterNDC();
 	void recalculatePoints();
+	~Function() = default;
 };

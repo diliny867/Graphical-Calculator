@@ -66,9 +66,6 @@ float markerSize = defaultMarkerSize;
 
 bool leftPressed = false;
 
-Function function(SCR_WIDTH, SCR_HEIGHT);
-std::size_t func_points_count = function.points.size();
-
 float last_centerx = 0;
 
 struct Character {
@@ -80,7 +77,20 @@ struct Character {
 std::map<GLchar, Character> Characters;
 GLuint characterVAO, characterVBO;
 
+class FuncData {
+public:
+    Function function;
+    std::string inputData;
+    std::vector<std::future<void>> futures;
+    GLuint vbo = 0;
+    GLuint vao = 0;
+    bool need_remap_vbo = false;
+};
+std::vector<FuncData*> functions;
+
 bool update_func = true;
+
+bool need_update_shaders = false;
 
 namespace RenderAxisNumbersPrecision {
     int xprecision = Function::float_precision;
@@ -93,7 +103,7 @@ namespace RenderAxisNumbersPrecision {
         yprecision = Function::float_precision;
         xformatting = std::fixed;
         yformatting = std::fixed;
-        const glm::vec2 f_size = function.getSize();
+        const glm::vec2 f_size = Function::getSize();
         if (f_size.x<2.0f) {
             xprecision += 1;
             if (f_size.x<0.4f) {
@@ -236,7 +246,6 @@ int main() {
 
     Time::Init();
 
-    //Shader shader("shaders/shader_vs.glsl", "shaders/shader_fs.glsl");
 	//Shader funcShader("resources/shaders/shader_vs.glsl", "resources/shaders/shader_gs.glsl", "resources/shaders/shader_fs.glsl");
 	Shader funcShader("resources/shaders/shader2_vs.glsl", "resources/shaders/shader2_gs.glsl", "resources/shaders/shader2_fs.glsl");
 	Shader coordAxisShader("resources/shaders/coordAxisShader_vs.glsl", "resources/shaders/coordAxisShader_gs.glsl", "resources/shaders/coordAxisShader_fs.glsl");
@@ -246,24 +255,19 @@ int main() {
     coordAxisNumbersShader.use();
     coordAxisNumbersShader.setMat4("projection", projection);
 
-    GLuint vbo;
-    VBO::generate(vbo, static_cast<GLsizeiptr>(func_points_count*sizeof(glm::vec2)), function.points.data(), GL_DYNAMIC_DRAW);
-    VBO::bind(vbo);
+    //GLuint vbo;
+    //VBO::generate(vbo, static_cast<GLsizeiptr>(Function::calc_points_count*sizeof(glm::vec2)), NULL, GL_DYNAMIC_DRAW);
+    //VBO::bind(vbo);
     GLuint vao;
     VAO::generate(vao);
     VAO::bind(vao);
     VAO::addAttrib(vao, 0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
     //GLuint ebo;
     //EBO::generate(ebo, sizeof(indices), indices, GL_STATIC_DRAW);
-    
-    std::string inputData = "sin(x)+2";
-    function.setFunction(inputData);
-    function.recalculatePoints();
 
     funcShader.use();
     //constexpr float markerSize = 0.0f;
     //funcShader.setFloat("markerRadius", markerSize);
-    funcShader.setInt("pointCount", static_cast<int>(func_points_count));
     funcShader.setFloat("ycenter", 0.0f);
     funcShader.setVec3("color", glm::vec3(1.0f)); //desmos color: glm::vec3(199.0f, 68.0f, 64.0f)/255.0f
     //glUniform2fv(glGetUniformLocation(funcShader.id, "vPoints"), static_cast<GLsizei>(function.points.size()), reinterpret_cast<float*>(function.points.data()));
@@ -275,21 +279,6 @@ int main() {
     coordAxisShader.setVec3("color", coordAxisColor);
 
     constexpr float buttonsInc = 0.15f;
-
-    auto remap_vbo = [](GLuint _vbo) {
-        VBO::bind(_vbo);
-        void* ptr = glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
-        memcpy(ptr, function.points.data(), func_points_count*sizeof(glm::vec2)); //copy points data to vbo
-        glUnmapBuffer(GL_ARRAY_BUFFER);
-        //VBO::setSubData(_vbo, 0, static_cast<GLsizeiptr>(func_points_count*sizeof(glm::vec2)), function.points.data()); //what is faster?
-    };
-
-    //function.recalculatePoints();
-    //std::thread th(std::ref(remap_vbo), vbo); //cant do this, because different thread cant execute callback on main thread
-
-    std::vector<std::future<void>> futures;
-    futures.push_back({ std::async(std::launch::async, [] {function.recalculatePoints(); }) });
-    bool need_remap_vbo = false;
 
     while (!glfwWindowShouldClose(window)) {
         processInput(window);
@@ -307,37 +296,81 @@ int main() {
         ImGui::Begin("Settings");
         {
             if (ImGui::Button("Home")) {
-                function.setSize(10.0f, 10.0f);
-                function.setCenter(0.0f, 0.0f);
+	            Function::setSize(10.0f, 10.0f);
+	            Function::setCenter(0.0f, 0.0f);
+                need_update_shaders = true;
+                for (std::size_t i = 0; i<functions.size(); i++) {
+                    functions[i]->function.needs_update = true;
+                }
                 RenderAxisNumbersPrecision::updatePrecision();
             }
             if (ImGui::Button("+")) {
-                function.multSize(1.0f-buttonsInc, 1.0f-buttonsInc);
+	            Function::multSize(1.0f-buttonsInc, 1.0f-buttonsInc);
+                need_update_shaders = true;
+                for (std::size_t i = 0; i<functions.size(); i++) {
+                    functions[i]->function.needs_update = true;
+                }
                 RenderAxisNumbersPrecision::updatePrecision();
             }
             if (ImGui::Button("-")) {
-                function.multSize(1.0f+buttonsInc, 1.0f+buttonsInc);
+	            Function::multSize(1.0f+buttonsInc, 1.0f+buttonsInc);
+                need_update_shaders = true;
+                for (std::size_t i = 0; i<functions.size(); i++) {
+                    functions[i]->function.needs_update = true;
+                }
                 RenderAxisNumbersPrecision::updatePrecision();
             }
             if (ImGui::Button("X +")) {
-                function.multSize(1.0f-buttonsInc, 1.0f);
+	            Function::multSize(1.0f-buttonsInc, 1.0f);
+                need_update_shaders = true;
+                for (std::size_t i = 0; i<functions.size(); i++) {
+                    functions[i]->function.needs_update = true;
+                }
                 RenderAxisNumbersPrecision::updatePrecision();
             }
             if (ImGui::Button("X -")) {
-                function.multSize(1.0f+buttonsInc, 1.0f);
+	            Function::multSize(1.0f+buttonsInc, 1.0f);
+                need_update_shaders = true;
+                for (std::size_t i = 0; i<functions.size(); i++) {
+                    functions[i]->function.needs_update = true;
+                }
                 RenderAxisNumbersPrecision::updatePrecision();
             }
             if (ImGui::Button("Y +")) {
-                function.multSize(1.0f, 1.0f-buttonsInc);
+                Function::multSize(1.0f, 1.0f-buttonsInc);
+                need_update_shaders = true;
+                for (std::size_t i = 0; i<functions.size(); i++) {
+                    functions[i]->function.needs_update = true;
+                }
                 RenderAxisNumbersPrecision::updatePrecision();
             }
             if (ImGui::Button("Y -")) {
-                function.multSize(1.0f, 1.0f+buttonsInc);
+                Function::multSize(1.0f, 1.0f+buttonsInc);
+                need_update_shaders = true;
+                for (std::size_t i = 0; i<functions.size(); i++) {
+                    functions[i]->function.needs_update = true;
+                }
                 RenderAxisNumbersPrecision::updatePrecision();
             }
-            if (ImGui::InputText("Input function", &inputData)) {
-                function.setFunction(inputData);
-                futures.push_back({ std::async(std::launch::async, [] {function.recalculatePoints(); }) });
+            if (ImGui::Button("+ function")) {
+                functions.push_back(new FuncData());
+                VBO::generate(functions.back()->vbo, static_cast<GLsizeiptr>(Function::calc_points_count*sizeof(glm::vec2)), functions.back()->function.points.data(), GL_DYNAMIC_DRAW);
+                VAO::generate(functions.back()->vao);
+                VAO::bind(functions.back()->vao);
+                VAO::addAttrib(functions.back()->vao, 0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
+            }
+            if (ImGui::Button("- function")) {
+                if (!functions.empty()) {
+                    VBO::deleteIt(functions.back()->vbo);
+                    VAO::deleteIt(functions.back()->vao);
+                    functions.pop_back();
+                }
+            }
+            for(std::size_t i=0; i<functions.size(); i++) {
+                if (ImGui::InputText(std::string("Function "+std::to_string(i+1)).c_str(), &functions[i]->inputData)) {
+                    functions[i]->function.setFunction(functions[i]->inputData);
+                    functions[i]->futures.push_back({ std::async(std::launch::async, [&, i] {functions[i]->function.recalculatePoints(); }) });
+                }
             }
         }
         ImGui::End();
@@ -348,65 +381,48 @@ int main() {
             update_func = true;
         }
 
-        if (function.needs_update) {
-            futures.push_back({ std::async(std::launch::async, [] {function.recalculatePoints(); }) });
-            function.needs_update = false;
-        }
-        for(auto it = futures.begin();it<futures.end();) {
-	        if(it->_Is_ready()) { //if future is ready, remap vbo and remove the future from vector
-                it = futures.erase(it);
-                need_remap_vbo = true;
-	        }else {
-                ++it;
-	        }
-        }
-        if(need_remap_vbo) {
+        if(need_update_shaders) {
             coordAxisShader.use();
-            coordAxisShader.setVec2("center", function.getCenter().x, function.getCenter().y);
+            coordAxisShader.setVec2("center", Function::xcenter, Function::ycenter);
             funcShader.use();
-            funcShader.setFloat("ycenter", function.getCenter().y);
-            remap_vbo(vbo);
-            need_remap_vbo = false;
+            funcShader.setFloat("ycenter", Function::ycenter);
+            need_update_shaders = false;
         }
-
-    	//if (function.needs_update) {
-    	//	coordAxisShader.use();
-    	//	coordAxisShader.setVec2("center", function.getCenter().x, function.getCenter().y);
-    	//	funcShader.use();
-        //    funcShader.setFloat("ycenter", function.getCenter().y);
-        //    //std::cout<<mouse_unpressed<<std::endl;
-        //    //glm::vec2 curr_func_size = function.getSize();
-        //    if (abs(lastX-last_updated_mouse_x)>=mouse_move_update_threshold || abs(lastY-last_updated_mouse_y)>=mouse_move_update_threshold || wheel_scrolled || mouse_unpressed
-        //        /*|| abs(curr_func_size.x-last_updated_size_x)>=size_update_threshold || abs(curr_func_size.y-last_updated_size_y)>=size_update_threshold*/) {
-        //        function.recalculatePoints();
-        //        recalculatePointsCallback(vbo);
-        //        last_updated_mouse_x = lastX;
-        //        last_updated_mouse_y = lastY;
-        //        //last_updated_size_x = curr_func_size.x;
-        //        //last_updated_size_y = curr_func_size.y;
-        //        last_centerx = function.getCenter().x;
-        //        wheel_scrolled = false;
-        //        mouse_unpressed = false;
-        //        funcShader.setFloat("xmove", 0.0f);
-        //    } else {
-        //        funcShader.setFloat("xmove", function.getCenter().x-last_centerx);
-        //    }
-    	//	function.needs_update = false;
-    	//}
-
 
     	glLineWidth(1);
         VAO::bind(vao);
         coordAxisShader.use();
         glDrawArrays(GL_POINTS, 0, 1);
 
-        RenderAxisNumbers(coordAxisNumbersShader, function.getCenter(), function.getSize(), 0.25f, glm::vec3(0.7f));
+        RenderAxisNumbers(coordAxisNumbersShader, Function::getCenter(), Function::getSize(), 0.25f, glm::vec3(0.7f));
 
         glLineWidth(3);
-        VAO::bind(vao);
         funcShader.use();
-        glDrawArrays(GL_LINE_STRIP_ADJACENCY, 0, static_cast<GLsizei>(func_points_count));
-        
+
+        for (std::size_t i = 0; i<functions.size(); i++) {
+            if (functions[i]->function.needs_update) {
+                functions[i]->futures.push_back({ std::async(std::launch::async, [&, i] {functions[i]->function.recalculatePoints(); }) });
+                functions[i]->function.needs_update = false;
+            }
+            for (auto it = functions[i]->futures.begin(); it<functions[i]->futures.end();) {
+                if (it->_Is_ready()) { //if future is ready, remap vbo and remove the future from vector
+                    it = functions[i]->futures.erase(it);
+                    functions[i]->need_remap_vbo = true;
+                } else {
+                    ++it;
+                }
+            }
+            if (functions[i]->need_remap_vbo) {
+                VBO::bind(functions[i]->vbo);
+                void* ptr = glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
+                memcpy(ptr, functions[i]->function.points.data(), Function::calc_points_count*sizeof(glm::vec2)); //copy points data to vbo
+                glUnmapBuffer(GL_ARRAY_BUFFER);
+                functions[i]->need_remap_vbo = false;
+            }
+
+            VAO::bind(functions[i]->vao);
+            glDrawArrays(GL_LINE_STRIP_ADJACENCY, 0, static_cast<GLsizei>(Function::calc_points_count));
+        }
 
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
@@ -456,7 +472,11 @@ void mouse_cursor_callback(GLFWwindow* window, const double xpos, const double y
         if (leftPressed) {
             const float deltaX = xposIn-lastX;
             const float deltaY = yposIn-lastY;
-        	function.incCenter(deltaX/(SCR_WIDTH/2.0f), deltaY/(SCR_HEIGHT/2.0f));
+            Function::incCenter(deltaX/(SCR_WIDTH/2.0f), deltaY/(SCR_HEIGHT/2.0f));
+            need_update_shaders = true;
+            for (std::size_t i = 0; i<functions.size(); i++) {
+                functions[i]->function.needs_update = true;
+            }
         }
     }
 
@@ -469,7 +489,10 @@ void mouse_button_callback(GLFWwindow* window, const int button, const int actio
         leftPressed = true;
     } else if(button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE){
         leftPressed = false;
-        function.needs_update = true;
+        need_update_shaders = true;
+        for (std::size_t i = 0; i<functions.size(); i++) {
+            functions[i]->function.needs_update = true;
+        }
         mouse_unpressed = true;
     }
 }
@@ -477,10 +500,13 @@ void mouse_button_callback(GLFWwindow* window, const int button, const int actio
 void mouse_scroll_callback(GLFWwindow* window, const double xoffset, const double yoffset) {
     wheel_scrolled = true;
     if (update_func) {
-        function.incCenter( -(lastX/static_cast<float>(SCR_WIDTH) -function.getCenterNDC().x)*(static_cast<float>(yoffset)/10.0f),
-							-(lastY/static_cast<float>(SCR_HEIGHT)-function.getCenterNDC().y)*(static_cast<float>(yoffset)/10.0f));
-        function.multSize((1.0f-static_cast<float>(yoffset)/20.0f), (1.0f-static_cast<float>(yoffset)/20.0f));
-
+	    Function::incCenter( -(lastX/static_cast<float>(SCR_WIDTH) -Function::getCenterNDC().x)*(static_cast<float>(yoffset)/10.0f),
+	                         -(lastY/static_cast<float>(SCR_HEIGHT)-Function::getCenterNDC().y)*(static_cast<float>(yoffset)/10.0f));
+        Function::multSize((1.0f-static_cast<float>(yoffset)/20.0f), (1.0f-static_cast<float>(yoffset)/20.0f));
+        need_update_shaders = true;
+        for (std::size_t i = 0; i<functions.size(); i++) {
+            functions[i]->function.needs_update = true;
+        }
         RenderAxisNumbersPrecision::updatePrecision();
     }
 }
