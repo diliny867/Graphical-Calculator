@@ -71,7 +71,7 @@ namespace ExprStrParser {
 
 	class Parser {
 	private:
-		static inline std::set<std::string> cop_set{ "log", "sin", "cos", "tan", "sqrt", "ceil", "floor", "round", "abs" , "mod"};
+		static inline std::set<std::string> cop_set{ "log", "sin", "cos", "tan", "sqrt", "ceil", "floor", "round", "abs" , "mod" };
 		Tree tree;
 		Expression expression{};
 		Node* rcalcNode(const std::vector<token>::reverse_iterator& rit_begin, const std::vector<token>::reverse_iterator& rit_end);
@@ -85,11 +85,16 @@ namespace ExprStrParser {
 	public:
 		Parser() = default;
 		void parse(std::string& str);
+		std::map<std::string, float> get_args();
 		void set_args(const float x);
+		void set_args(const std::string& name, const float value);
+		void set_args(const std::pair<std::string, float>& arg);
 		void set_args(const std::map<std::string, float>& args);
 		void set_args(const float x, const std::map<std::string, float>& args);
 		float calculate()const;
 		float calculate(const float x);
+		float calculate(const std::string& name, const float value);
+		float calculate(const std::pair<std::string, float>& arg);
 		float calculate(const std::map<std::string, float>& args);
 		float calculate(const float x, const std::map<std::string, float>& args);
 	};

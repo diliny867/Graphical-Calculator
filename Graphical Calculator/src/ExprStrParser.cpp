@@ -130,6 +130,11 @@ namespace ExprStrParser {
 			} else {
 				for (const auto& ch : str_) { //converts abc to a*b*c
 					tokens.push_back(token(std::string(1, ch), STR));
+					if (tokens.back().val == "x") {
+						expression.x = 0.0f;
+					} else {
+						expression.func_args[tokens.back().val] = 0.0f;
+					}
 					tokens.push_back(token("*", OP));
 				}
 				tokens.pop_back();
@@ -358,6 +363,7 @@ namespace ExprStrParser {
 	}
 
 	void Parser::parse(std::string& str) {
+		expression.func_args.clear();
 		tokenize(str);
 		//for (const auto& token: tokens) {
 		//	std::cout<< token.val <<" ";
@@ -369,11 +375,24 @@ namespace ExprStrParser {
 		}else {
 			expression.expr = []() {return std::nanf(""); };
 		}
+		//for (auto it = expression.func_args.begin(); it!=expression.func_args.end();++it) {
+		//	std::cout<<it->first<<" ";
+		//}
 		//tree.print();
+	}
+
+	std::map<std::string, float> Parser::get_args() {
+		return expression.func_args;
 	}
 
 	void Parser::set_args(const float x) {
 		expression.x = x;
+	}
+	void Parser::set_args(const std::string& name, const float value) {
+		expression.func_args[name] = value;
+	}
+	void Parser::set_args(const std::pair<std::string, float>& arg) {
+		expression.func_args[arg.first] = arg.second;
 	}
 	void Parser::set_args(const std::map<std::string, float>& args) {
 		expression.func_args = args;
@@ -387,6 +406,14 @@ namespace ExprStrParser {
 	}
 	float Parser::calculate(const float x) {
 		expression.x = x;
+		return expression.expr();
+	}
+	float Parser::calculate(const std::string& name, const float value) {
+		expression.func_args[name] = value;
+		return expression.expr();
+	}
+	float Parser::calculate(const std::pair<std::string, float>& arg) {
+		expression.func_args[arg.first] = arg.second;
 		return expression.expr();
 	}
 	float Parser::calculate(const std::map<std::string, float>& args) {
