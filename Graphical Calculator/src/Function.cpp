@@ -78,4 +78,3 @@ void Function::recalculatePoints() {
 //	callback(vbo);
 //}
 
-
