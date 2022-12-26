@@ -12,14 +12,8 @@
 #include <mutex>
 #include "ExprStrParser.h"
 
-class Function{
+class Function {
 private:
-	
-
-	
-
-	ExprStrParser::Parser expr_str_parser;
-
 	std::mutex m;
 
 	//void recalculate_points_thread(const std::function<void(GLuint)>& callback, const GLuint vbo);
@@ -33,13 +27,18 @@ public:
 	inline static float xcenter = 0.0f;
 	inline static float ycenter = 0.0f;
 
-	const inline static int calc_points_count = 1600; //keep as multiple of 200
+	const inline static int calc_points_count = 2000;
 
-	bool needs_update;
+	inline static bool needs_update = false;
+
+	bool needs_personal_update = false;
+
+	ExprStrParser::Parser expr_str_parser;
+
 	Function();
 	Function(int _screen_width, int _screen_height);
 	std::vector<glm::vec2>points;
-	
+
 	void setFunction(std::string& str);
 	static void setScreenSize(int _screen_width, int _screen_height);
 	static void setSize(float _xsize, float _ysize);
