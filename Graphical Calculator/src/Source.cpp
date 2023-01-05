@@ -40,8 +40,8 @@ std::string getFPS_str(int precision);
 void RenderText(const Shader& shader, std::string text, float x, float y, float scale, glm::vec3 color);
 void RenderAxisNumbers(const Shader& shader, glm::vec2 center, glm::vec2 size, float scale, glm::vec3 color);
 
-int SCR_WIDTH = 800;
-int SCR_HEIGHT = 600;
+float SCR_WIDTH = 800;
+float SCR_HEIGHT = 600;
 
 //mouse last positions
 float lastX = SCR_WIDTH / 2.0f;
@@ -258,9 +258,11 @@ int main() {
     Shader coordAxisShader("resources/shaders/coordAxisShader_vs.glsl", "resources/shaders/coordAxisShader_gs.glsl", "resources/shaders/coordAxisShader_fs.glsl");
     Shader coordAxisNumbersShader("resources/shaders/coordAxisNumbersShader_vs.glsl", "resources/shaders/coordAxisNumbersShader_fs.glsl");
 
-    glm::mat4 projection = glm::ortho(0.0f, static_cast<float>(SCR_WIDTH), 0.0f, static_cast<float>(SCR_HEIGHT));
+    glm::mat4 projection = glm::ortho(0.0f, SCR_WIDTH, 0.0f, SCR_HEIGHT);
     coordAxisNumbersShader.use();
     coordAxisNumbersShader.setMat4("projection", projection);
+    coordAxisNumbersShader.setVec2("center", Function::xcenter, Function::ycenter);
+    coordAxisNumbersShader.setVec2("size", Function::xsize, Function::ysize);
 
     //GLuint vbo;
     //VBO::generate(vbo, static_cast<GLsizeiptr>(Function::calc_points_count*sizeof(glm::vec2)), NULL, GL_DYNAMIC_DRAW);
@@ -282,9 +284,12 @@ int main() {
 
     coordAxisShader.use();
     coordAxisShader.setVec2("center", 0.0f, 0.0f);
+    coordAxisShader.setVec2("size", Function::xsize, Function::ysize);
 
-    glm::vec3 coordAxisColor = glm::vec3(0.5f);
-    coordAxisShader.setVec3("color", coordAxisColor);
+    glm::vec3 coordAxisCenterColor = glm::vec3(0.5f);
+    glm::vec3 coordAxisGridColor = glm::vec3(0.2f);
+    coordAxisShader.setVec3("centerColor", coordAxisCenterColor);
+    coordAxisShader.setVec3("gridColor", coordAxisGridColor);
 
     constexpr float buttonsInc = 0.15f;
 
@@ -296,6 +301,8 @@ int main() {
     VAO::addAttrib(functions.back()->vao, 0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
     //functions.back()->color = glm::vec3(1.0f);
     functions.back()->color = glm::vec3(static_cast<float>(rand())/(RAND_MAX), static_cast<float>(rand())/(RAND_MAX), static_cast<float>(rand())/(RAND_MAX));
+    std::string s_ = "";
+    functions.back()->function.setFunction(s_);
 
     while (!glfwWindowShouldClose(window)) {
         processInput(window);
@@ -409,7 +416,7 @@ int main() {
                         }
                         ImGui::SameLine();
                         const float inc = abs(arg.second/10.0f);
-                        if (ImGui::DragFloat(arg.first.c_str(), &arg.second, inc==0?0.001f:(inc>1000.0f?1000.0f:inc))) {
+                        if (ImGui::DragFloat(arg.first.c_str(), &arg.second, inc==0.0f?0.001f:(inc>1000.0f?1000.0f:inc))) {
                             functions[i]->function.expr_str_parser.set_args(arg);
                             functions[i]->function.needs_personal_update = true;
                         }
@@ -441,6 +448,10 @@ int main() {
         if (need_update_shaders) {
             coordAxisShader.use();
             coordAxisShader.setVec2("center", Function::xcenter, Function::ycenter);
+            coordAxisShader.setVec2("size", Function::xsize, Function::ysize);
+        	coordAxisNumbersShader.use();
+            coordAxisNumbersShader.setVec2("center", Function::xcenter, Function::ycenter);
+            coordAxisNumbersShader.setVec2("size", Function::xsize, Function::ysize);
             funcShader.use();
             funcShader.setFloat("ycenter", Function::ycenter);
             need_update_shaders = false;
@@ -454,7 +465,7 @@ int main() {
         if (viewpoint_updated) {
             funcShader.use();
             funcShader.setVec2("resolution", SCR_WIDTH, SCR_HEIGHT);
-            projection = glm::ortho(0.0f, static_cast<float>(SCR_WIDTH), 0.0f, static_cast<float>(SCR_HEIGHT));
+            projection = glm::ortho(0.0f, SCR_WIDTH, 0.0f, SCR_HEIGHT);
             coordAxisNumbersShader.use();
             coordAxisNumbersShader.setMat4("projection", projection);
         }
@@ -570,8 +581,8 @@ void mouse_button_callback(GLFWwindow* window, const int button, const int actio
 void mouse_scroll_callback(GLFWwindow* window, const double xoffset, const double yoffset) {
     wheel_scrolled = true;
     if (update_func) {
-        Function::incCenter(-(lastX/static_cast<float>(SCR_WIDTH) -Function::getCenterNDC().x)*(static_cast<float>(yoffset)/10.0f),
-            -(lastY/static_cast<float>(SCR_HEIGHT)-Function::getCenterNDC().y)*(static_cast<float>(yoffset)/10.0f));
+        Function::incCenter(-(lastX/SCR_WIDTH -Function::getCenterNDC().x)*(static_cast<float>(yoffset)/10.0f),
+            -(lastY/SCR_HEIGHT-Function::getCenterNDC().y)*(static_cast<float>(yoffset)/10.0f));
         Function::multSize((1.0f-static_cast<float>(yoffset)/20.0f), (1.0f-static_cast<float>(yoffset)/20.0f));
         need_update_shaders = true;
         Function::needs_update = true;
@@ -586,7 +597,7 @@ void RenderAxisNumbers(const Shader& shader, const glm::vec2 center, const glm::
     //const float yside_indent = SCR_HEIGHT/80.0f;
 
     std::stringstream ss;
-
+    
     for (int i = -10; i<10; i++) {
         ss.str("");
         ss << RenderAxisNumbersPrecision::xformatting << std::setprecision(RenderAxisNumbersPrecision::xprecision) << interval.x*(static_cast<float>(i)-center.x*10.0f)/2.0f;
@@ -646,7 +657,7 @@ void RenderText(const Shader& shader, std::string text, float x, float y, const 
 
 void framebuffer_size_callback(GLFWwindow* window, const int width, const int height) {
     viewpoint_updated = true;
-    SCR_WIDTH = width;
-    SCR_HEIGHT = height;
+    SCR_WIDTH = static_cast<int>(width);
+    SCR_HEIGHT = static_cast<int>(height);
     glViewport(0, 0, width, height);//0,0 - left bottom
 }
