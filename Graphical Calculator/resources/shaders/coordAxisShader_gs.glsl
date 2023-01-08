@@ -10,12 +10,13 @@ uniform vec3 gridColor;
 
 out vec3 color;
 
-float log10Division = 1/log(10.0);
+float gridSize = 10.0; //making it as uniform breaks it somehow
+float logDivision = 1.0/log(gridSize);
 
 void main() {
-	vec2 exp_ = ceil(log10Division*log(size));
-	vec2 v = pow(vec2(10.0),exp_);
-	vec2 interval = (v/size)/10;
+	vec2 exp_ = ceil(logDivision*log(size));
+	vec2 v = pow(vec2(gridSize),exp_);
+	vec2 interval = (v/size)/10.0;
 	vec2 offset = mod((abs(center)), interval); //without abs something goes wrong
 	offset.x*=sign(center.x);
 	offset.y*=sign(center.y);

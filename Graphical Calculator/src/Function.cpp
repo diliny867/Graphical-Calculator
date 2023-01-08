@@ -36,6 +36,11 @@ void Function::setCenter(const float _xcenter, const float _ycenter) {
 	ycenter = _ycenter;
 	//needs_update = true;
 }
+void Function::setCenter(const glm::vec2 _center) {
+	xcenter = _center.x;
+	ycenter = _center.y;
+	//needs_update = true;
+}
 void Function::incCenter(const float delta_xcenter, const float delta_ycenter) {
 	xcenter += delta_xcenter;
 	ycenter += delta_ycenter;

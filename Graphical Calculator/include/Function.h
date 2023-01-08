@@ -45,6 +45,7 @@ public:
 	static void multSize(const float delta_xsize, const float delta_ysize);
 	static glm::vec2 getSize();
 	static void setCenter(float _xcenter, float _ycenter);
+	static void setCenter(glm::vec2 _center);
 	static void incCenter(const float delta_xcenter, const float delta_ycenter);
 	static void multCenter(const float delta_xcenter, const float delta_ycenter);
 	static glm::vec2 getCenter();
