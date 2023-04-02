@@ -2,7 +2,7 @@
 
 #include <glm/glm.hpp>
 
-#include <myGL/VBO.h>
+#include "../myGL/VBO.h"
 
 #include <iostream>
 #include <vector>
@@ -27,7 +27,7 @@ public:
 	inline static float xcenter = 0.0f;
 	inline static float ycenter = 0.0f;
 
-	const inline static int calc_points_count = 2000;
+	constexpr inline static int calc_points_count = 4000;
 
 	inline static bool needs_update = false;
 

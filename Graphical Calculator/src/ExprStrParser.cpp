@@ -114,7 +114,7 @@ namespace ExprStrParser {
 		return []() {return 0.0f; };
 	}
 
-	void Parser::check_str_sstream(std::stringstream& str_ss) {// !TODO: parse things like xlog to x and log, not x l o g
+	void Parser::check_str_sstream(std::stringstream& str_ss) { // TODO: parse things like x123
 		if (!str_ss.str().empty()) {
 			std::string str_;
 			str_ss>>str_;
@@ -128,17 +128,18 @@ namespace ExprStrParser {
 			} else if (math_consts.count(str_)) {
 				tokens.push_back(token(math_consts.at(str_), NUM));
 			} else {
-				for (const auto& ch : str_) { //converts abc to a*b*c
-					tokens.push_back(token(std::string(1, ch), STR));
-					if (tokens.back().val == "x") {
-						expression.x = 0.0f;
-					} else {
-						expression.func_args[tokens.back().val] = 0.0f;
-					}
-					tokens.push_back(token("*", OP));
-				}
-				tokens.pop_back();
-				//tokens.push_back(token(str_, STR));
+				//for (const auto& ch : str_) { //converts abc to a*b*c
+				//	tokens.push_back(token(std::string(1, ch), STR));
+				//	if (tokens.back().val == "x") {
+				//		expression.x = 0.0f;
+				//	} else {
+				//		expression.func_args[tokens.back().val] = 0.0f;
+				//	}
+				//	tokens.push_back(token("*", OP));
+				//}
+				//tokens.pop_back();
+
+				tokens.push_back(token(str_, STR));
 			}
 			str_ss = std::stringstream();
 		}

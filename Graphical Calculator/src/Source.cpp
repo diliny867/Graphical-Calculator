@@ -19,12 +19,12 @@
 
 #include "../include/Function.h"
 
-#include <myGL/Shader.h>
-#include <myGL/VAO.h>
-#include <myGL/VBO.h>
-#include <myGL/EBO.h>
-#include <myGL/Time.h>
-#include <myGL/Texture2D.h>
+#include "../myGL/Shader.h"
+#include "../myGL/VAO.h"
+#include "../myGL/VBO.h"
+#include "../myGL/EBO.h"
+#include "../myGL/Time.h"
+#include "../myGL/Texture2D.h"
 
 #include <ft2build.h>
 #include FT_FREETYPE_H

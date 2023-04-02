@@ -27,13 +27,13 @@
     <ClCompile Include="..\..\External Libraries\imgui\imgui_stdlib.cpp" />
     <ClCompile Include="..\..\External Libraries\imgui\imgui_tables.cpp" />
     <ClCompile Include="..\..\External Libraries\imgui\imgui_widgets.cpp" />
-    <ClCompile Include="..\..\OpenGL Projects\includes\myGL\EBO.cpp" />
-    <ClCompile Include="..\..\OpenGL Projects\includes\myGL\Shader.cpp" />
-    <ClCompile Include="..\..\OpenGL Projects\includes\myGL\stb_image.cpp" />
-    <ClCompile Include="..\..\OpenGL Projects\includes\myGL\Texture2D.cpp" />
-    <ClCompile Include="..\..\OpenGL Projects\includes\myGL\VAO.cpp" />
-    <ClCompile Include="..\..\OpenGL Projects\includes\myGL\VBO.cpp" />
     <ClCompile Include="G:\Prog\Other\Cpp\External Libraries\OpenGL\glad.c" />
+    <ClCompile Include="myGL\EBO.cpp" />
+    <ClCompile Include="myGL\Shader.cpp" />
+    <ClCompile Include="myGL\stb_image.cpp" />
+    <ClCompile Include="myGL\Texture2D.cpp" />
+    <ClCompile Include="myGL\VAO.cpp" />
+    <ClCompile Include="myGL\VBO.cpp" />
     <ClCompile Include="src\ExprStrParser.cpp" />
     <ClCompile Include="src\Function.cpp" />
     <ClCompile Include="src\Source.cpp" />
@@ -137,7 +137,7 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>G:\Prog\Other\Cpp\OpenGL Projects\includes;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
