@@ -39,22 +39,34 @@ void showFPS();
 std::string getFPS_str(int precision);
 void RenderText(const Shader& shader, std::string text, float x, float y, float scale, glm::vec3 color);
 void RenderAxisNumbers(const Shader& shader, glm::vec2 center, glm::vec2 size, float scale, glm::vec3 color);
+std::function<void()> ViewpointUpdateShaderCallback;
 
 float SCR_WIDTH = 800;
 float SCR_HEIGHT = 600;
 
-//mouse last positions
-float lastX = SCR_WIDTH / 2.0f;
-float lastY = SCR_HEIGHT / 2.0f;
-bool firstMouse = true;
+class Mouse {
+public:
+    Mouse(const float x, const float y):pos({x,y}){}
+    Mouse():Mouse(0,0){}
+    glm::vec2 pos;
+    bool leftPressed = false;
+    bool rightPressed = false;
+    bool wheelScrolled = false;
+    bool firstInput = true;
+};
+Mouse mouse(SCR_WIDTH/2.0f, SCR_HEIGHT/2.0f);
 
-bool wheel_scrolled = false;
-bool mouse_unpressed = false;
+//mouse last positions
+//float lastX = SCR_WIDTH / 2.0f;
+//float lastY = SCR_HEIGHT / 2.0f;
+//bool firstMouse = true;
+//bool wheel_scrolled = false;
+//bool leftPressed = false;
 
 //assign values for update thresholds
 /* currently unused
-float last_updated_mouse_x = lastX;
-float last_updated_mouse_y = lastY;
+float last_updated_mouse_x = mouse.pos.x;
+float last_updated_mouse_y = mouse.pos.y;
 constexpr float mouse_move_update_threshold = 10.0f; //px
 
 float last_updated_size_x = 20.0f;
@@ -62,12 +74,9 @@ float last_updated_size_y = 20.0f;
 constexpr float size_update_threshold = 0.1f; // %/100
 */
 
-constexpr float defaultMarkerSize = 0.002f;
-float markerSize = defaultMarkerSize;
+//constexpr float defaultMarkerSize = 0.002f;
+//float markerSize = defaultMarkerSize;
 
-bool leftPressed = false;
-
-float last_centerx = 0;
 
 struct Character {
     GLuint TextureID; // ID handle of the glyph texture
@@ -95,7 +104,10 @@ bool update_func = true;
 
 bool need_update_shaders = false;
 
-bool viewpoint_updated = false;
+//bool viewpoint_updated = false;
+
+std::atomic_bool appOn = true;
+std::mutex m;
 
 namespace RenderAxisNumbersPrecision {
     int xprecision = Function::float_precision;
@@ -181,6 +193,7 @@ int main() {
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     //glEnable(GL_LINE_SMOOTH);
     //glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
+    
 
     srand(static_cast<unsigned int>(time(NULL)));
 
@@ -258,6 +271,7 @@ int main() {
     Shader coordAxisShader("resources/shaders/coordAxisShader_vs.glsl", "resources/shaders/coordAxisShader_gs.glsl", "resources/shaders/coordAxisShader_fs.glsl");
     Shader coordAxisNumbersShader("resources/shaders/coordAxisNumbersShader_vs.glsl", "resources/shaders/coordAxisNumbersShader_fs.glsl");
     Shader textShader("resources/shaders/textShader_vs.glsl", "resources/shaders/textShader_fs.glsl");
+    Shader mouseDotShader("resources/shaders/mouseDot_vs.glsl","resources/shaders/mouseDot_fs.glsl");
 
     glm::mat4 projection = glm::ortho(0.0f, SCR_WIDTH, 0.0f, SCR_HEIGHT);
     coordAxisNumbersShader.use();
@@ -279,6 +293,13 @@ int main() {
     //GLuint ebo;
     //EBO::generate(ebo, sizeof(indices), indices, GL_STATIC_DRAW);
 
+    GLuint mouseDotVBO;
+    VBO::generate(mouseDotVBO, sizeof(glm::vec2), NULL, GL_STATIC_DRAW);
+    GLuint mouseDotVAO;
+    VAO::generate(mouseDotVAO);
+    VAO::bind(mouseDotVAO);
+    VAO::addAttrib(mouseDotVAO, 0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
+
     funcShader.use();
     //constexpr float markerSize = 0.0f;
     //funcShader.setFloat("markerRadius", markerSize);
@@ -297,6 +318,16 @@ int main() {
     coordAxisShader.setVec3("centerColor", coordAxisCenterColor);
     coordAxisShader.setVec3("gridColor", coordAxisGridColor);
 
+    ViewpointUpdateShaderCallback = [&]() {
+        funcShader.use();
+        funcShader.setVec2("resolution", SCR_WIDTH, SCR_HEIGHT);
+        projection = glm::ortho(0.0f, SCR_WIDTH, 0.0f, SCR_HEIGHT);
+        coordAxisNumbersShader.use();
+        coordAxisNumbersShader.setMat4("projection", projection);
+        textShader.use();
+        textShader.setMat4("projection", projection);
+    };
+
     constexpr float buttonsInc = 0.15f;
 
     //add first function
@@ -307,8 +338,53 @@ int main() {
     VAO::addAttrib(functions.back()->vao, 0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
     //functions.back()->color = glm::vec3(1.0f);
     functions.back()->color = glm::vec3(static_cast<float>(rand())/(RAND_MAX), static_cast<float>(rand())/(RAND_MAX), static_cast<float>(rand())/(RAND_MAX));
-    std::string s_ = "";
-    functions.back()->function.setFunction(s_);
+    std::string func_clear("");
+    functions.back()->function.setFunction(func_clear);
+
+    MouseDot mouseDot;
+    mouseDotShader.use();
+    mouseDotShader.setVec3("color", mouseDot.color);
+    std::thread mouseDotThread([&]() {
+        while (appOn) {
+            if (mouse.leftPressed) {
+                const glm::vec2 mousePos = glm::vec2(mouse.pos.x / SCR_WIDTH * 2.0f - 1.0f, -(mouse.pos.y / SCR_HEIGHT * 2.0f - 1.0f));
+                glm::vec2 closestPoint = { 4,4 };
+                if (mouseDot.funcCaptured) {
+                    if (mouseDot.byDistance) {
+                        for (const glm::vec2 point : mouseDot.func->points) {
+                            const glm::vec2 pointPos = { point.x,point.y - Function::ycenter };
+                            if (glm::distance(mousePos, pointPos) < glm::distance(mousePos, closestPoint)) {
+                                closestPoint = pointPos;
+                            }
+                        }
+                        mouseDot.screenPos = closestPoint;
+                    }else {
+                        mouseDot.screenPos = mouseDot.func->calcPointScrPos(mousePos);
+                    }
+                }else {
+                    std::lock_guard lg(m);
+                    for(const auto& func: functions) {
+	                    if(func->show) {
+		                    for(const auto& point: func->function.points) {
+                                const glm::vec2 pointPos = { point.x,point.y - Function::ycenter };
+			                    if(glm::distance(mousePos, pointPos) < glm::distance(mousePos, closestPoint)) {
+                                    closestPoint = pointPos;
+                                    mouseDot.func = &func->function;
+			                    }
+		                    }
+                            if(glm::distance(mousePos, closestPoint)<0.03f) {
+                                mouseDot.screenPos = closestPoint;
+                                mouseDot.funcCaptured = true;
+                                break;
+                            }
+	                    }
+                    }
+                }
+            }else {
+                mouseDot.funcCaptured = false;
+            }
+        }
+    });
 
     while (!glfwWindowShouldClose(window)) {
         processInput(window);
@@ -373,17 +449,27 @@ int main() {
                 Function::needs_update = true;
                 RenderAxisNumbersPrecision::updatePrecision();
             }
+            //ImGui::Text("\n"); //somehow this makes indent smaller than " "
+            ImGui::Checkbox("Mouse Dot by distance", &mouseDot.byDistance);
+            ImGui::SameLine();
+            if(ImGui::ColorEdit3("Mouse Dot color", value_ptr(mouseDot.color), ImGuiColorEditFlags_NoInputs)) {
+                mouseDotShader.use();
+                mouseDotShader.setVec3("color", mouseDot.color);
+            }
             if (ImGui::Button("Add new function")) {
+                std::lock_guard lg(m);
                 functions.push_back(new FuncData());
                 VBO::generate(functions.back()->vbo, static_cast<GLsizeiptr>(Function::calc_points_count*sizeof(glm::vec2)), functions.back()->function.points.data(), GL_DYNAMIC_DRAW);
                 VAO::generate(functions.back()->vao);
                 VAO::bind(functions.back()->vao);
                 VAO::addAttrib(functions.back()->vao, 0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
                 functions.back()->color = glm::vec3(static_cast<float>(rand())/(RAND_MAX), static_cast<float>(rand())/(RAND_MAX), static_cast<float>(rand())/(RAND_MAX));
+                functions.back()->function.setFunction(func_clear);
             }
             ImGui::SameLine();
             if (ImGui::Button("Remove last function")) {
                 if (!functions.empty()) {
+                    std::lock_guard lg(m);
                     VBO::deleteIt(functions.back()->vbo);
                     VAO::deleteIt(functions.back()->vao);
                     functions.pop_back();
@@ -445,7 +531,7 @@ int main() {
         }
         ImGui::End();
 
-        if (imGuiIO.WantCaptureMouse) {
+        if (imGuiIO.WantCaptureMouse || mouseDot.funcCaptured) {
             update_func = false;
         } else {
             update_func = true;
@@ -468,20 +554,21 @@ int main() {
         coordAxisShader.use();
         glDrawArrays(GL_POINTS, 0, 1);
 
-        if (viewpoint_updated) {
-            funcShader.use();
-            funcShader.setVec2("resolution", SCR_WIDTH, SCR_HEIGHT);
-            projection = glm::ortho(0.0f, SCR_WIDTH, 0.0f, SCR_HEIGHT);
-            coordAxisNumbersShader.use();
-            coordAxisNumbersShader.setMat4("projection", projection);
-            textShader.use();
-            textShader.setMat4("projection", projection);
-        }
+        VAO::bind(vao);
+        coordAxisShader.use();
+        //if (viewpoint_updated) {
+        //    funcShader.use();
+        //    funcShader.setVec2("resolution", SCR_WIDTH, SCR_HEIGHT);
+        //    projection = glm::ortho(0.0f, SCR_WIDTH, 0.0f, SCR_HEIGHT);
+        //    coordAxisNumbersShader.use();
+        //    coordAxisNumbersShader.setMat4("projection", projection);
+        //    textShader.use();
+        //    textShader.setMat4("projection", projection);
+        //}
         RenderAxisNumbers(coordAxisNumbersShader, Function::getCenter(), Function::getSize(), 0.25f, glm::vec3(0.7f));
 
         glLineWidth(3);
         funcShader.use();
-
         for (std::size_t i = 0; i<functions.size(); i++) {
             if (!functions[i]->show) { continue; }
             if (Function::needs_update) {
@@ -517,6 +604,19 @@ int main() {
         }
         Function::needs_update = false;
 
+        if (mouseDot.funcCaptured) {
+            VAO::bind(mouseDotVAO);
+            VBO::setData(mouseDotVBO, sizeof(glm::vec2), &mouseDot.screenPos, GL_STATIC_DRAW);
+            glPointSize(7);
+            mouseDotShader.use();
+            glDrawArrays(GL_POINTS, 0, 1);
+            //std::stringstream ss;
+            //ss << RenderAxisNumbersPrecision::xformatting << std::setprecision(RenderAxisNumbersPrecision::xprecision) << Function::xsize*(mouseDot.screenPos.x-Function::xcenter) << " ";
+            //ss << RenderAxisNumbersPrecision::yformatting << std::setprecision(RenderAxisNumbersPrecision::yprecision) << Function::ysize*(mouseDot.func->expr_str_parser.calculate(mouseDot.screenPos.y+Function::ycenter));
+            const std::string dotText = std::to_string(Function::xsize*(mouseDot.screenPos.x-Function::xcenter)) + " " + std::to_string(Function::ysize*(mouseDot.func->expr_str_parser.calculate(mouseDot.screenPos.y+Function::ycenter)));
+            RenderText(textShader, dotText, SCR_WIDTH*(mouseDot.screenPos.x+1.0f)*0.5f+10.0f, SCR_HEIGHT*(mouseDot.screenPos.y+1.0f)*0.5f, 0.3f, glm::vec3(0.7f));
+        }
+
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
@@ -526,9 +626,13 @@ int main() {
         glfwPollEvents();
     }
 
+    appOn = false;
+
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
+
+    mouseDotThread.join();
 
     glfwTerminate();
     return 0;
@@ -555,45 +659,44 @@ void mouse_cursor_callback(GLFWwindow* window, const double xpos, const double y
     const float xposIn = static_cast<float>(xpos);
     const float yposIn = static_cast<float>(ypos);
 
-    if (firstMouse) {
-        lastX = xposIn;
-        lastY = yposIn;
-        firstMouse = false;
+    if (mouse.firstInput) {
+        mouse.pos.x = xposIn;
+        mouse.pos.y = yposIn;
+        mouse.firstInput = false;
     }
 
     if (update_func) {
-        if (leftPressed) {
-            const float deltaX = xposIn-lastX;
-            const float deltaY = yposIn-lastY;
+        if (mouse.leftPressed) {
+            const float deltaX = xposIn-mouse.pos.x;
+            const float deltaY = yposIn-mouse.pos.y;
             Function::incCenter(deltaX/(SCR_WIDTH/2.0f), deltaY/(SCR_HEIGHT/2.0f));
             need_update_shaders = true;
             Function::needs_update = true;
         }
     }
 
-    lastX = xposIn;
-    lastY = yposIn;
+    mouse.pos.x = xposIn;
+    mouse.pos.y = yposIn;
 }
 
 void mouse_button_callback(GLFWwindow* window, const int button, const int action, int mods) {
     if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
-        leftPressed = true;
+        mouse.leftPressed = true;
     } else if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE) {
-        leftPressed = false;
+        mouse.leftPressed = false;
         need_update_shaders = true;
         Function::needs_update = true;
-        mouse_unpressed = true;
     }
 }
 
 void mouse_scroll_callback(GLFWwindow* window, const double xoffset, const double yoffset) {
-    wheel_scrolled = true;
+    mouse.wheelScrolled = true;
     if (update_func) {
-        const glm::vec2 mousePos = glm::vec2(lastX/SCR_WIDTH*2.0f-1.0f, lastY/SCR_HEIGHT*2.0f-1.0f);
+        const glm::vec2 mousePos = glm::vec2(mouse.pos.x/SCR_WIDTH*2.0f-1.0f, mouse.pos.y/SCR_HEIGHT*2.0f-1.0f);
         const glm::vec2 lastValue = (-Function::getCenter()+mousePos)*Function::getSize();
-	    //const glm::vec2 lastCenterValue = (Function::getCenter()+glm::vec2(lastX/SCR_WIDTH*2-1, lastY/SCR_HEIGHT*2-1))*Function::getSize();
-        //Function::incCenter(-(lastX/SCR_WIDTH -Function::getCenterNDC().x)*(static_cast<float>(yoffset)/10.0f),
-		//					-(lastY/SCR_HEIGHT-Function::getCenterNDC().y)*(static_cast<float>(yoffset)/10.0f));
+	    //const glm::vec2 lastCenterValue = (Function::getCenter()+glm::vec2(mouse.pos.x/SCR_WIDTH*2-1, mouse.pos.y/SCR_HEIGHT*2-1))*Function::getSize();
+        //Function::incCenter(-(mouse.pos.x/SCR_WIDTH -Function::getCenterNDC().x)*(static_cast<float>(yoffset)/10.0f),
+		//					-(mouse.pos.y/SCR_HEIGHT-Function::getCenterNDC().y)*(static_cast<float>(yoffset)/10.0f));
         Function::multSize((1.0f-static_cast<float>(yoffset)/20.0f), (1.0f-static_cast<float>(yoffset)/20.0f));
         Function::setCenter(-lastValue/Function::getSize()+mousePos);
         need_update_shaders = true;
@@ -672,7 +775,8 @@ void RenderText(const Shader& shader, std::string text, float x, float y, const 
 
 
 void framebuffer_size_callback(GLFWwindow* window, const int width, const int height) {
-    viewpoint_updated = true;
+    //viewpoint_updated = true;
+    ViewpointUpdateShaderCallback();
     SCR_WIDTH = static_cast<float>(width);
     SCR_HEIGHT = static_cast<float>(height);
     glViewport(0, 0, width, height);//0,0 - left bottom

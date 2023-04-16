@@ -12,6 +12,12 @@ void Function::setFunction(std::string& str) {
 	expr_str_parser.parse(str);
 }
 
+glm::vec2 Function::calcPointScrPos(const glm::vec2 screenPos) {
+	std::lock_guard lg(m);
+	return {screenPos.x, (expr_str_parser.calculate((screenPos.x-xcenter)*xsize)/ysize-ycenter)};
+}
+
+
 void Function::setScreenSize(const int _screen_width, const int _screen_height) {
 	screen_width = _screen_width;
 	screen_height = _screen_height;
