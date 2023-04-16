@@ -14,10 +14,10 @@
 
 class Function {
 private:
-	std::mutex m;
-
 	//void recalculate_points_thread(const std::function<void(GLuint)>& callback, const GLuint vbo);
+
 public:
+	std::mutex m;
 	inline static int float_precision = 1;
 
 	inline static int screen_width = 800;
@@ -41,6 +41,7 @@ public:
 
 	void setFunction(std::string& str);
 	glm::vec2 calcPointScrPos(glm::vec2 screenPos);
+	float calcAtScrPos(glm::vec2 screenPos);
 	static void setScreenSize(int _screen_width, int _screen_height);
 	static void setSize(float _xsize, float _ysize);
 	static void multSize(const float delta_xsize, const float delta_ysize);

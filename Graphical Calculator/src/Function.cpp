@@ -16,6 +16,10 @@ glm::vec2 Function::calcPointScrPos(const glm::vec2 screenPos) {
 	std::lock_guard lg(m);
 	return {screenPos.x, (expr_str_parser.calculate((screenPos.x-xcenter)*xsize)/ysize-ycenter)};
 }
+float Function::calcAtScrPos(const glm::vec2 screenPos) {
+	std::lock_guard lg(m);
+	return expr_str_parser.calculate((screenPos.x-xcenter)*xsize);
+}
 
 
 void Function::setScreenSize(const int _screen_width, const int _screen_height) {
