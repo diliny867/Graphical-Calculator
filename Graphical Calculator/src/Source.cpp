@@ -778,8 +778,9 @@ void RenderText(const Shader& shader, std::string text, float x, float y, const 
 
 void framebuffer_size_callback(GLFWwindow* window, const int width, const int height) {
     //viewpoint_updated = true;
-    ViewpointUpdateShaderCallback();
     SCR_WIDTH = static_cast<float>(width);
     SCR_HEIGHT = static_cast<float>(height);
-    glViewport(0, 0, width, height);//0,0 - left bottom
+    glViewport(0, 0, width, height);
+    //0,0 - left bottom
+    ViewpointUpdateShaderCallback();
 }

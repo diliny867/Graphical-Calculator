@@ -14,10 +14,10 @@
 
 class Function {
 private:
+	std::mutex m;
 	//void recalculate_points_thread(const std::function<void(GLuint)>& callback, const GLuint vbo);
 
 public:
-	std::mutex m;
 	inline static int float_precision = 1;
 
 	inline static int screen_width = 800;
