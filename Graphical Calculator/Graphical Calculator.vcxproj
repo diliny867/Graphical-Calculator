@@ -27,7 +27,7 @@
     <ClCompile Include="..\..\External Libraries\imgui\imgui_stdlib.cpp" />
     <ClCompile Include="..\..\External Libraries\imgui\imgui_tables.cpp" />
     <ClCompile Include="..\..\External Libraries\imgui\imgui_widgets.cpp" />
-    <ClCompile Include="G:\Prog\Other\Cpp\External Libraries\OpenGL\glad.c" />
+    <ClCompile Include="extDeps\glad.c" />
     <ClCompile Include="myGL\EBO.cpp" />
     <ClCompile Include="myGL\Shader.cpp" />
     <ClCompile Include="myGL\stb_image.cpp" />
@@ -95,12 +95,12 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>G:\Prog\Other\Cpp\External Libraries\OpenGL;G:\Prog\Other\Cpp\External Libraries\;$(IncludePath)</IncludePath>
-    <LibraryPath>G:\Prog\Other\Cpp\External Libraries\OpenGL;G:\Prog\Other\Cpp\External Libraries\;$(LibraryPath)</LibraryPath>
+    <IncludePath>extDeps;$(IncludePath)</IncludePath>
+    <LibraryPath>extDeps;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>G:\Prog\Other\Cpp\External Libraries\OpenGL;G:\Prog\Other\Cpp\External Libraries;$(IncludePath)</IncludePath>
-    <LibraryPath>G:\Prog\Other\Cpp\External Libraries\OpenGL;G:\Prog\Other\Cpp\External Libraries;$(LibraryPath)</LibraryPath>
+    <IncludePath>extDeps;$(IncludePath)</IncludePath>
+    <LibraryPath>extDeps;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -154,7 +154,7 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>G:\Prog\Other\Cpp\OpenGL Projects\includes;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <Optimization>MaxSpeed</Optimization>
     </ClCompile>
     <Link>

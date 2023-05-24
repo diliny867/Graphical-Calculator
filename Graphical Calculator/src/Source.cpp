@@ -345,8 +345,10 @@ int main() {
     mouseDotShader.use();
     mouseDotShader.setVec3("color", mouseDot.color);
     std::thread mouseDotThread([&]() {
+        bool lastLeftPressed = false;
         while (appOn) {
             if (mouse.leftPressed) {
+                if (imGuiIO.WantCaptureMouse) {continue;}
                 const glm::vec2 mousePos = glm::vec2(mouse.pos.x / SCR_WIDTH * 2.0f - 1.0f, -(mouse.pos.y / SCR_HEIGHT * 2.0f - 1.0f));
                 glm::vec2 closestPoint = { 4,4 };
                 if (mouseDot.funcCaptured) {
@@ -362,6 +364,7 @@ int main() {
                         mouseDot.screenPos = mouseDot.func->calcPointScrPos(mousePos);
                     }
                 }else {
+                    if (lastLeftPressed && !mouseDot.funcCaptured) { continue; }
                     std::lock_guard lg(m);
                     for(const auto& func: functions) {
 	                    if(func->show) {
@@ -372,15 +375,17 @@ int main() {
                                     mouseDot.func = &func->function;
 			                    }
 		                    }
-                            if(glm::distance(mousePos, closestPoint)<0.03f) {
+                            if(glm::distance(mousePos, closestPoint)<0.025f) {
                                 mouseDot.screenPos = closestPoint;
                                 mouseDot.funcCaptured = true;
                                 break;
                             }
 	                    }
                     }
+                    lastLeftPressed = true;
                 }
             }else {
+                lastLeftPressed = false;
                 mouseDot.funcCaptured = false;
             }
         }
