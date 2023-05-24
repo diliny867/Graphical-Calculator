@@ -19,15 +19,15 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\External Libraries\imgui\imgui.cpp" />
-    <ClCompile Include="..\..\External Libraries\imgui\imgui_demo.cpp" />
-    <ClCompile Include="..\..\External Libraries\imgui\imgui_draw.cpp" />
-    <ClCompile Include="..\..\External Libraries\imgui\imgui_impl_glfw.cpp" />
-    <ClCompile Include="..\..\External Libraries\imgui\imgui_impl_opengl3.cpp" />
-    <ClCompile Include="..\..\External Libraries\imgui\imgui_stdlib.cpp" />
-    <ClCompile Include="..\..\External Libraries\imgui\imgui_tables.cpp" />
-    <ClCompile Include="..\..\External Libraries\imgui\imgui_widgets.cpp" />
     <ClCompile Include="extDeps\glad.c" />
+    <ClCompile Include="extDeps\imgui\imgui.cpp" />
+    <ClCompile Include="extDeps\imgui\imgui_demo.cpp" />
+    <ClCompile Include="extDeps\imgui\imgui_draw.cpp" />
+    <ClCompile Include="extDeps\imgui\imgui_impl_glfw.cpp" />
+    <ClCompile Include="extDeps\imgui\imgui_impl_opengl3.cpp" />
+    <ClCompile Include="extDeps\imgui\imgui_stdlib.cpp" />
+    <ClCompile Include="extDeps\imgui\imgui_tables.cpp" />
+    <ClCompile Include="extDeps\imgui\imgui_widgets.cpp" />
     <ClCompile Include="myGL\EBO.cpp" />
     <ClCompile Include="myGL\Shader.cpp" />
     <ClCompile Include="myGL\stb_image.cpp" />
