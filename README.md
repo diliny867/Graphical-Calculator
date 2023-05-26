@@ -38,8 +38,8 @@ User also can open the programm using [Graphical Calculator/Graphical Calculator
 | Multiplication operator | x \* y |
 | Division operator       | x \/ y |
 | Power operator          | x \^ y |
-
 </details>
+
 <details open>
 <summary>
 2. Advanced math functions
@@ -57,9 +57,27 @@ User also can open the programm using [Graphical Calculator/Graphical Calculator
 | Round a num to higher          | call |
 | ?          | mod |
 </details>
-3. Infinte function zoom and move <br>
-4. Check funtion value at a point <br>
-5. Infinte quantity of functions <br>
+
+<details open>
+<summary>
+3. Infinte function zoom and move 
+</summary>
+
+</details>
+
+<details open>
+<summary>
+4. Check funtion value at a point 
+</summary>
+
+</details>
+
+<details open>
+<summary>
+5. Infinte quantity of functions 
+</summary>
+
+</details>
 
 ## Usage
 To get started with offli
