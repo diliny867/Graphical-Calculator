@@ -17,13 +17,15 @@ In folder where you want to install the project, open command promt (cmd) from f
 git clone https://github.com/diliny867/Graphical-Calculator.git
 ```
 ### From [Releases](https://github.com/diliny867/Graphical-Calculator/releases)
+1. Download the Graphical.Calculator.zip file from **Releases** and extract it
+2. Execute the Graphical Calculator.exe file
 
 ## Execution
 ### Using [Visual Studio](https://visualstudio.microsoft.com/)
 To execute program using [VS](https://visualstudio.microsoft.com/) open [Graphical Calculator.sln](https://github.com/diliny867/Graphical-Calculator/blob/master/Graphical%20Calculator.sln) with program.
 Setup Local Windows Debugger and debug .sin file.
 ### .exe
-User also can open the programm using [Graphical Calculator/Graphical Calculator.exe](https://github.com/diliny867/Graphical-Calculator/blob/master/Graphical%20Calculator/Graphical%20Calculator.exe) file
+User can open the programm using [Graphical Calculator/Graphical Calculator.exe](https://github.com/diliny867/Graphical-Calculator/blob/master/Graphical%20Calculator/Graphical%20Calculator.exe) file
 ## Features
 
 <details open>
