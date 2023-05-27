@@ -53,9 +53,9 @@ User also can open the programm using [Graphical Calculator/Graphical Calculator
 | Trigonometric functions  | sin(x), cos(x), tan(x) |
 | Absolute value function       | abs |
 | Round a number          | round |
-| Round a number on lower          | floor |
+| Round a number to lower          | floor |
 | Round a num to higher          | call |
-| ?          | mod |
+| Remainder of the division          | mod |
 </details>
 
 <details open>
