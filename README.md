@@ -90,19 +90,19 @@ The user can directly open the program by running the [Graphical Calculator.exe]
 
 <details open> 
 <summary> 3. Infinite function zoom and movement capabilities. </summary> 
-![Point check](attachments/Graphical_Calculator_Scrolling.mp4)
+![Point check](attachments/Graphical_Calculator_Scrolling.webp)
 
 </details>
 
 <details open> 
 <summary> 4. The ability to check the value of a function at a specific point. </summary> 
-![Point check](attachments/Graphical_Calculator_Check_Point.mp4)
+![Point check](attachments/Graphical_Calculator_Check_Point.webp)
 
 </details>
 
 <details open> 
 <summary> 5. Support for an *infinite* number of functions. </summary> 
-![Different functions](attachments/Graphical_Calculator_Functions.mp4)
+![Different functions](attachments/Graphical_Calculator_Functions.webp)
 
 </details>
 
