@@ -53,11 +53,11 @@ User can open the programm using [Graphical Calculator/Graphical Calculator.exe]
 | Logarithmic function           | sqrt(x) |
 | Minus operator          | log(x) |
 | Trigonometric functions  | sin(x), cos(x), tan(x) |
-| Absolute value function       | abs |
-| Round a number          | round |
-| Round a number to lower          | floor |
-| Round a num to higher          | call |
-| Remainder of the division          | mod |
+| Absolute value function       | abs(x) |
+| Round a number          | round(x) |
+| Round a number to lower          | floor(x) |
+| Round a num to higher          | ceil(x) |
+| Remainder of the division          | mod(x,x1) |
 </details>
 
 <details open>
