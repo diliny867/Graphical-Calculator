@@ -82,7 +82,16 @@ User can open the programm using [Graphical Calculator/Graphical Calculator.exe]
 </details>
 
 ## Usage
-To get started with offli
+ - To get started with offline calculator, open the executable file
+ - On the top right of the screen you can see the menu on the calculator, all the other space is a canvas for the functions to be drawn on.
+ - Top 2 rows of the calculator menu are responsible for the global zoom
+ - On the third row user can set the dot at cursor parameter
+ - Pressing the 4th row buttons user can add or remove functions from canvas
+ - Button **-** on the left of the function removes the chosen function
+ - Button hide/show hides or show the function
+ - Button **Variables** allows user to change values of custom variables in function, for example in funciton *x\*a* user can change *a* value
+ - The next button is color picker for the given function
+ - Blue field is a place to input your function 
 
 ## Roadmap
 The goal of the offline graphical calculator is to provide a lightweight, portative user-friendly way of analysing funktions 
