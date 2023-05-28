@@ -50,13 +50,13 @@ User can open the programm using [Graphical Calculator/Graphical Calculator.exe]
 | Function                | Syntax |
 |-------------------------|--------|
 | Factorial function           | x\! |
-| Logarithmic function           | sqrt(x) |
-| Minus operator          | log(x) |
+| Square root function           | sqrt(x) |
+| Logarithmic operator          | log(x) |
 | Trigonometric functions  | sin(x), cos(x), tan(x) |
 | Absolute value function       | abs(x) |
 | Round a number          | round(x) |
-| Round a number to lower          | floor(x) |
-| Round a num to higher          | ceil(x) |
+| Round down a number          | floor(x) |
+| Round up a number          | ceil(x) |
 | Remainder of the division          | mod(x,x1) |
 </details>
 
