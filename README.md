@@ -3,14 +3,14 @@
 # Offline Graphic Calculator
 
 ![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg?style=for-the-badge)
-![Build: Partial](https://img.shields.io/badge/build-partial-brightgreen?style=for-the-badge)
+![Build: Passing](https://img.shields.io/badge/build-passing-brightgreen?style=for-the-badge)
 ![Language: C++](https://img.shields.io/badge/language-c%2B%2B-blue?style=for-the-badge)
 
 The Offline Graphic Calculator is a tool designed to calculate and display mathematical functions in a fast and accurate manner. It has been developed to cater to both simple and advanced users, providing the user with the opportunity to analyze mathematical functions without the need for an internet connection, even on less powerful computers.
 
 [Motivation](#motivation) •
 [Installation](#installation) •
-[Execution](#execution) •
+[Launching the application](#launching_the_application) •
 [Features](#features) •
 [Usage](#usage) •
 [Roadmap](#roadmap) •
@@ -43,9 +43,9 @@ git clone https://github.com/diliny867/Graphical-Calculator.git
 1. Download the Graphical.Calculator.zip file from [Releases](https://github.com/diliny867/Graphical-Calculator/releases) and extract it.
 2. Execute the Graphical Calculator.exe file.
 
-## Execution
+## Launching the application
 
-There are multiple ways to execute the Offline Graphic Calculator:
+There are multiple ways to launch the Offline Graphic Calculator app:
 
 ### Using Visual Studio
 
@@ -76,7 +76,7 @@ The user can directly open the program by running the [Graphical Calculator.exe]
 
 | Function                | Syntax                       |
 | ----------------------- | ---------------------------- |
-| Factorial               | `factorial(x)`               |
+| Factorial               | `x!`               |
 | Square root             | `sqrt(x)`                    |
 | Natural logarithm       | `log(x)`                     |
 | Trigonometric functions | `sin(x)`, `cos(x)`, `tan(x)` |
@@ -110,7 +110,7 @@ The user can directly open the program by running the [Graphical Calculator.exe]
 
 To get started with the Offline Graphic Calculator, follow these steps:
 
-1. Launch the application using one of the execution methods mentioned above.
+1. Launch the application using one of the methods mentioned above.
 2. Once the calculator is open, you will see the calculator menu on the top right of the screen.
 3. The majority of the screen is a canvas where functions can be drawn.
 4. The top two rows of the calculator menu control the global zoom.
