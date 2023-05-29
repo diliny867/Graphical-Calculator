@@ -169,5 +169,35 @@ The goal of the Offline Graphic Calculator is to provide a lightweight, portable
 This project is licensed under the MIT License. See the [LICENSE](https://github.com/diliny867/Graphical-Calculator/blob/master/LICENSE) file for details
 
 ## Authors
- - Ilja Volinskis, 18 y.o
- - Ilja Safronovs, 18 y.o
+
+<table>
+  <tr>
+    <td align="center">
+      <a href="https://github.com/diliny867">
+        <img src="https://avatars.githubusercontent.com/u/100518672?v=4&s=140" alt="diliny867 avatar" /><br />
+      </a>
+    </td>
+    <td align="center">
+      <a href="https://github.com/Akkompanist">
+        <img src="https://avatars.githubusercontent.com/u/96627800?v=4&s=140" alt="eis avatar" /><br />
+      </a>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+     <a href="https://github.com/diliny867">
+      <sub>
+       <b>Ilja Volinskis</b>
+      </sub>
+     </a>
+    </td>
+    <td align="center">
+     <a href="https://github.com/Akkompanist">
+      <sub>
+       <b>Iļja Safronovs</b>
+      </sub>
+     </a>
+    </td>
+  </tr>
+</table>
+
