@@ -13,8 +13,11 @@ The Offline Graphic Calculator is a tool designed to calculate and display mathe
 [Launching the application](#launching-the-application) •
 [Features](#features) •
 [Usage](#usage) •
+[Used Technologies](#used-technologies) •
+[References](#references) •
 [Roadmap](#roadmap) •
-[License](#license)
+[License](#license) •
+[Authors](#authors)
 
 </div>
 
@@ -122,6 +125,33 @@ To get started with the Offline Graphic Calculator, follow these steps:
 10. The colour picker button allows you to select a colour for the function.
 11. The blue field is where you can input your own function.
 
+## Technical requirements
+
+ - Application is super lightweight and will run on almost any machine. Supported by graphical cards, running graphical drivers, released since 2010. Minumum windows XP is recommended.
+
+## Used Technologies
+
+### Indirect
+ - Visual Studio 2022 IDE
+ - JetBrains ReSharper plugin for Visual Studio 2022.
+ - Github hosting service.
+
+### Direct
+ - OpenGL: cross-platform API for rendering 2D and 3D vector graphics.
+ - FreeType: open source software library to render fonts.
+ - ImGUI: open source graphical user interface library for C++.
+ - GLFW: lightweight utility library for use with OpenGL.
+ - Glad: a library that loads pointers to OpenGL functions at runtime.
+ - GLM: C++ mathematics library for use with OpenGL.
+
+## References
+
+ - [opengl.org](https://www.opengl.org) - main website for the OpenGL wiki, forums and documentation
+ - [khronos.org](https://www.khronos.org) - website of a group behind the OpenGL, Vulkan and many other API
+ - [learnopengl.com](https://www.learnopengl.com) - book for learning OpenGL, by Joey de Vries
+ - [wikipedia.com](https://www.wikipedia.com) - online encyclopedia, preserving many useful information for the project
+ - [Blog: An introduction to the Dear ImGui library](https://blog.conan.io/2019/06/26/An-introduction-to-the-Dear-ImGui-library.html) - blog, explaining basic usage of ImGUI
+
 ## Roadmap
 
 The goal of the Offline Graphic Calculator is to provide a lightweight, portable, and user-friendly tool for analyzing mathematical functions. The following enhancements are planned for future development:
@@ -137,3 +167,7 @@ The goal of the Offline Graphic Calculator is to provide a lightweight, portable
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](https://github.com/diliny867/Graphical-Calculator/blob/master/LICENSE) file for details
+
+## Authors
+ - Ilja Volinskis, 18 y.o
+ - Ilja Safronovs, 18 y.o
