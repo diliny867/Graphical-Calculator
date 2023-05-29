@@ -137,6 +137,7 @@ To get started with the Offline Graphic Calculator, follow these steps:
  - Github hosting service.
 
 ### Direct
+ - Custom written text math expression parser and solver.
  - OpenGL: cross-platform API for rendering 2D and 3D vector graphics.
  - FreeType: open source software library to render fonts.
  - ImGUI: open source graphical user interface library for C++.
