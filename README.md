@@ -93,13 +93,13 @@ The user can directly open the program by running the [Graphical Calculator.exe]
 
 <details open> 
 <summary> 3. Infinite function zoom and movement capabilities. </summary> 
-<a href="https://github.com/diliny867/Graphical-Calculator/blob/master/attachments/Graphical_Calculator_Scrolling.webp">Scrolling</a> 
+<a href="https://github.com/diliny867/Graphical-Calculator/blob/master/attachments/Graphical_Calculator_Functions.webp">Scrolling</a> 
 
 </details>
 
 <details open> 
 <summary> 4. The ability to check the value of a function at a specific point. </summary> 
-<a href="https://github.com/diliny867/Graphical-Calculator/blob/master/attachments/Graphical_Calculator_Check_Point.webp">Point check</a> 
+<a href="https://github.com/diliny867/Graphical-Calculator/blob/master/attachments/Graphical_Calculator_Functions.webp">Point check</a> 
 
 </details>
 
