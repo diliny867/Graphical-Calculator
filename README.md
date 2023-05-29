@@ -202,8 +202,7 @@ This project is licensed under the MIT License. See the [LICENSE](https://github
 </table>
 
 <div align="right">
- 
-[![white_trianle_up](https://github.com/diliny867/Graphical-Calculator/assets/96627800/078c95b2-677b-4ab8-a93a-17475620a1a4#gh-dark-mode-only | 100)](#offline-graphic-calculator)
-[![black_triable_up](https://github.com/diliny867/Graphical-Calculator/assets/96627800/761c3aac-2cd3-4f88-93d3-7018d82ea9b7#gh-light-mode-only | 100)](#offline-graphic-calculator)
+
+[Back to start](#offline-graphic-calculator) 
  
 </div>
