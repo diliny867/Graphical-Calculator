@@ -93,19 +93,19 @@ The user can directly open the program by running the [Graphical Calculator.exe]
 
 <details open> 
 <summary> 3. Unlimited function zoom and movement capabilities. </summary> 
-<a href="https://github.com/diliny867/Graphical-Calculator/assets/100518672/929e50cf-2ad7-4439-bc79-48d330dbe912">function zomm and movement</a> 
+<img src="https://github.com/diliny867/Graphical-Calculator/assets/100518672/929e50cf-2ad7-4439-bc79-48d330dbe912" width="400" height="400" />
 
 </details>
 
 <details open> 
 <summary> 4. The ability to check the value of a function at a specific point. </summary> 
-<a href="https://github.com/diliny867/Graphical-Calculator/assets/100518672/1a827239-91df-49ac-987a-d874fbfb6ddf">check function pointrs</a> 
+<img src="https://github.com/diliny867/Graphical-Calculator/assets/100518672/1a827239-91df-49ac-987a-d874fbfb6ddf" width="400" height="400" />
 
 </details>
 
 <details open> 
 <summary> 5. Support for an *infinite* number of functions. </summary> 
-<a href="https://github.com/diliny867/Graphical-Calculator/blob/master/attachments/Graphical_Calculator_Functions.webp">Different functions</a> 
+<img src="https://github.com/diliny867/Graphical-Calculator/assets/100518672/b1eaef42-e5f4-4353-a2a8-f212b3b315c7" width="400" height="400" />
 
 </details>
 
