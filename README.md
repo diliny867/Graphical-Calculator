@@ -54,7 +54,7 @@ There are multiple ways to launch the Offline Graphic Calculator app:
 
 1. Open the project in [Visual Studio](https://visualstudio.microsoft.com/).
 2. Load the solution file [Graphical Calculator.sln](https://github.com/diliny867/Graphical-Calculator/blob/master/Graphical%20Calculator.sln).
-3. Set up the local Windows Debugger and debug the `.sin` file.
+3. Build and run the solution.
 
 ### Using the .exe file
 
@@ -121,13 +121,13 @@ To get started with the Offline Graphic Calculator, follow these steps:
 6. The buttons on the fourth row allow you to add or remove functions from the canvas.
 7. To remove a function, click the "-" button located on the left of the function.
 8. The "hide/show" button toggles the visibility of the function on the canvas.
-9. Clicking the "Variables" button enables you to change the values of custom variables in the function. For example, in a function like "_x \* a_", you can modify the value of "a".
+9. Clicking the "Variables" button allows you to change the values of custom variables in the function. For example, in a function like "_x \* a_", you can modify the value of "a".
 10. The colour picker button allows you to select a colour for the function.
-11. The blue field is where you can input your own function.
+11. The blue field is where you can input your function.
 
 ## Technical requirements
 
- - Application is super lightweight and will run on almost any machine. Supported by graphical cards, running graphical drivers, released since 2010. Minumum windows XP is recommended.
+ - The application is super lightweight and will run on almost any machine. Supported by graphical cards, running graphical drivers, released since 2010. Minimum Windows XP is recommended.
 
 ## Used Technologies
 
@@ -137,7 +137,7 @@ To get started with the Offline Graphic Calculator, follow these steps:
  - Github hosting service.
 
 ### Direct
- - Custom written text math expression parser and solver.
+ - Custom-written text math expression parser and solver.
  - OpenGL: cross-platform API for rendering 2D and 3D vector graphics.
  - FreeType: open source software library to render fonts.
  - ImGUI: open source graphical user interface library for C++.
@@ -147,11 +147,11 @@ To get started with the Offline Graphic Calculator, follow these steps:
 
 ## References
 
- - [opengl.org](https://www.opengl.org) - main website for the OpenGL wiki, forums and documentation
- - [khronos.org](https://www.khronos.org) - website of a group behind the OpenGL, Vulkan and many other API
- - [learnopengl.com](https://www.learnopengl.com) - book for learning OpenGL, by Joey de Vries
- - [wikipedia.com](https://www.wikipedia.com) - online encyclopedia, preserving many useful information for the project
- - [Blog: An introduction to the Dear ImGui library](https://blog.conan.io/2019/06/26/An-introduction-to-the-Dear-ImGui-library.html) - blog, explaining basic usage of ImGUI
+ - [opengl.org](https://www.opengl.org) - main website for the OpenGL wiki, forums and documentation.
+ - [khronos.org](https://www.khronos.org) - website of a group behind the OpenGL, Vulkan and many other API.
+ - [learnopengl.com](https://www.learnopengl.com) - book for learning OpenGL, by Joey de Vries.
+ - [wikipedia.com](https://www.wikipedia.com) - online encyclopedia, preserving many useful information for the project.
+ - [Blog: An introduction to the Dear ImGui library](https://blog.conan.io/2019/06/26/An-introduction-to-the-Dear-ImGui-library.html) - blog, explaining basic usage of ImGUI.
 
 ## Roadmap
 
@@ -167,7 +167,7 @@ The goal of the Offline Graphic Calculator is to provide a lightweight, portable
 
 ## License
 
-This project is licensed under the MIT License. See the [LICENSE](https://github.com/diliny867/Graphical-Calculator/blob/master/LICENSE) file for details
+This project is licensed under the MIT License. See the [LICENSE.md](https://github.com/diliny867/Graphical-Calculator/blob/master/LICENSE) file for details.
 
 ## Authors
 
