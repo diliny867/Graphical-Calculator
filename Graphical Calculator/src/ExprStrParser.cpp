@@ -6,6 +6,7 @@ namespace ExprStrParser {
 #define e_str  "2.71828182845904523536"
 	const std::map<std::string, std::string> math_consts{ {"pi", pi_str}, {"e", e_str} };
 
+//macro to compares two strings
 #define str_compare(s1, s2) (std::strcmp(s1, s2) == 0)
 
 	void Node::print(const std::string& prefix, const bool isLeft) const {
@@ -40,7 +41,7 @@ namespace ExprStrParser {
 		const token curr_token = node->value;
 
 		switch (curr_token.symb) {
-		case NUM://NUM and STR cover the case when both left and right nodes are nullptr
+		case NUM://NUM and STR cover the case when both left and right nodes are nullptr (leaf)
 			return [=]() {return std::stof(curr_token.val); };
 		case STR:
 			if (curr_token.val == "x") {
@@ -123,11 +124,11 @@ namespace ExprStrParser {
 					tokens.push_back(token("*", OP));
 				}
 			}
-			if (cop_set.count(str_)) {
+			if (cop_set.count(str_)) { //if complex operator
 				tokens.push_back(token(str_, COP));
-			} else if (math_consts.count(str_)) {
+			} else if (math_consts.count(str_)) { //if math constant
 				tokens.push_back(token(math_consts.at(str_), NUM));
-			} else {
+			} else { //other variable
 				//for (const auto& ch : str_) { //converts abc to a*b*c
 				//	tokens.push_back(token(std::string(1, ch), STR));
 				//	if (tokens.back().val == "x") {
@@ -151,7 +152,7 @@ namespace ExprStrParser {
 		}
 	}
 
-	void Parser::tokenize(std::string& str) {
+	void Parser::tokenize(std::string& str) { //tokenizes inputted string
 		tokens.reserve(str.size());
 		std::stringstream num_ss;
 		std::stringstream str_ss;
@@ -163,22 +164,22 @@ namespace ExprStrParser {
 				check_str_sstream(str_ss);
 			} else {
 				check_num_sstream(num_ss);
-				if (ispunct(*it)) {
+				if (ispunct(*it)) { //if not letter
 					check_str_sstream(str_ss);
 					if (*it == '-') {
-						if (tokens.empty() || str_compare(tokens.back().val.c_str(), "(")) {
+						if (tokens.empty() || str_compare(tokens.back().val.c_str(), "(")) {  //if - is first
 							tokens.push_back(token("0", NUM));
 						}
 					}
 					if (*it == '(') {
 						if (!tokens.empty()) {
-							if (tokens.back().symb == NUM || tokens.back().symb == STR || str_compare(tokens.back().val.c_str(), ")")) {
+							if (tokens.back().symb == NUM || tokens.back().symb == STR || str_compare(tokens.back().val.c_str(), ")")) { //if multiplying brackets
 								tokens.push_back(token("*", OP));
 							}
 						}
 					}
 					tokens.push_back(token(std::string(1, *it), OP));
-				} else {
+				} else { //letter
 					str_ss<<*it;
 					if (math_consts.count(str_ss.str())) {
 						if (!tokens.empty()) {
@@ -214,9 +215,9 @@ namespace ExprStrParser {
 		check_str_sstream(str_ss);
 	}
 
-	bool Parser::buildTokenTree() {
+	bool Parser::build_token_tree() {
 		try {
-			tree.head = rcalcNode(tokens.rbegin(), tokens.rend());
+			tree.head = rcalc_node(tokens.rbegin(), tokens.rend());
 			tokens.clear();
 			return true;
 		} catch (error_codes err) {
@@ -226,7 +227,7 @@ namespace ExprStrParser {
 		}
 	}
 
-	Node* Parser::rcalcNode(const std::vector<token>::reverse_iterator& rit_begin, const std::vector<token>::reverse_iterator& rit_end) {
+	Node* Parser::rcalc_node(const std::vector<token>::reverse_iterator& rit_begin, const std::vector<token>::reverse_iterator& rit_end) {
 		if (rit_end-rit_begin <= 0) {
 			throw PARSE_ERROR;
 		}
@@ -236,7 +237,7 @@ namespace ExprStrParser {
 
 		if (str_compare(rit_begin->val.c_str(), ")") && str_compare((rit_end-1)->val.c_str(), "(")) {//strips expression of side brackets
 			int level = 0;
-			for (auto rit = rit_begin+1; rit<rit_end-1; ++rit) {//temporary solution(its slow and needs to be checked in next two loops)
+			for (auto rit = rit_begin+1; rit<rit_end-1; ++rit) {//?temporary solution
 				if (rit->val == "(") {
 					--level;
 					if (level < 0) {
@@ -250,7 +251,7 @@ namespace ExprStrParser {
 				}
 			}
 			if (level == 0) {
-				return rcalcNode(rit_begin + 1, rit_end - 1);
+				return rcalc_node(rit_begin + 1, rit_end - 1);
 			}
 		}
 
@@ -273,21 +274,21 @@ namespace ExprStrParser {
 					}
 					if (rit->val == "," && level == 0) {
 						curr_node = new Node(*(rit_end-1));
-						curr_node->left = rcalcNode(rit+1, rit_end-2);
-						curr_node->right = rcalcNode(rit_begin+1, rit);
+						curr_node->left = rcalc_node(rit+1, rit_end-2);
+						curr_node->right = rcalc_node(rit_begin+1, rit);
 						return curr_node;
 					}
 				}
 				if (level == 0) {
 					curr_node = new Node(*(rit_end-1));
-					curr_node->right = rcalcNode(rit_begin, rit_end-1);
+					curr_node->right = rcalc_node(rit_begin, rit_end-1);
 					return curr_node;
 				}
 			}
 		}
 
 		int level = 0;
-		for (auto rit = rit_begin; rit<rit_end; ++rit) {
+		for (auto rit = rit_begin; rit<rit_end; ++rit) { //if + or -
 			if (rit->symb == OP) {
 				if (str_compare(rit->val.c_str(), ")")) {
 					++level;
@@ -300,8 +301,8 @@ namespace ExprStrParser {
 				if (level == 0) {
 					if (str_compare(rit->val.c_str(), "-") || str_compare(rit->val.c_str(), "+")) {
 						curr_node = new Node(token(rit->val, OP));
-						curr_node->left = rcalcNode(rit+1, rit_end);
-						curr_node->right = rcalcNode(rit_begin, rit);
+						curr_node->left = rcalc_node(rit+1, rit_end);
+						curr_node->right = rcalc_node(rit_begin, rit);
 						return curr_node;
 					}
 				}
@@ -309,7 +310,7 @@ namespace ExprStrParser {
 		}
 
 		level = 0;
-		for (auto rit = rit_begin; rit<rit_end; ++rit) {
+		for (auto rit = rit_begin; rit<rit_end; ++rit) { //if operator, except for ^ and !
 			if (rit->symb == OP) {
 				if (str_compare(rit->val.c_str(), ")")) {
 					++level;
@@ -322,8 +323,8 @@ namespace ExprStrParser {
 				if (level == 0) {
 					if (str_compare(rit->val.c_str(), "^") || str_compare(rit->val.c_str(), "!")) { continue; }
 					curr_node = new Node(*rit);
-					curr_node->left = rcalcNode(rit+1, rit_end);
-					curr_node->right = rcalcNode(rit_begin, rit);
+					curr_node->left = rcalc_node(rit+1, rit_end);
+					curr_node->right = rcalc_node(rit_begin, rit);
 					return curr_node;
 				}
 			}
@@ -343,13 +344,13 @@ namespace ExprStrParser {
 				if (level == 0) {
 					if (str_compare(rit->val.c_str(), "^")) {
 						curr_node = new Node(*rit);
-						curr_node->left = rcalcNode(rit+1, rit_end);
-						curr_node->right = rcalcNode(rit_begin, rit);
+						curr_node->left = rcalc_node(rit+1, rit_end);
+						curr_node->right = rcalc_node(rit_begin, rit);
 						return curr_node;
 					}
 					if (str_compare(rit->val.c_str(), "!")) {
 						curr_node = new Node(*rit);
-						curr_node->left = rcalcNode(rit+1, rit_end);
+						curr_node->left = rcalc_node(rit+1, rit_end);
 						return curr_node;
 					}
 				}
@@ -371,7 +372,7 @@ namespace ExprStrParser {
 		//	//std::cout << token.val << " " << token.symb << std::endl;
 		//}
 		//std::cout<<std::endl;
-		if (buildTokenTree()) {
+		if (build_token_tree()) {
 			set_func();
 		}else {
 			expression.expr = []() {return std::nanf(""); };

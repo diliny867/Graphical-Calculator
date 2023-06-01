@@ -12,9 +12,12 @@
 #include <cmath>
 //#include <chrono>
 
+//parser work principle: 
+//tokenizes input, then builds binary tree from these tokens, then traverses the tree recursively and recursively builds lamda expressions from tree nodes
+
 namespace ExprStrParser {
 
-	enum symbol {
+	enum symbol { //codes for tokens
 		NUL = 0,
 		NUM,//number
 		OP,//operator (+, -, *...)
@@ -49,7 +52,7 @@ namespace ExprStrParser {
 		token value;
 		Node* left = nullptr;
 		Node* right = nullptr;
-		void print(const std::string& prefix, const bool isLeft) const;
+		void print(const std::string& prefix, const bool isLeft) const; //prints tree
 	};
 	class Tree {
 	public:
@@ -64,34 +67,33 @@ namespace ExprStrParser {
 		std::function<float()> expr;
 		std::map<std::string, float> func_args;
 		float x = 0.0f;//cache x, to call it and assign faster
-		std::function<float()> calc_nodes(const Node* node);
+		std::function<float()> calc_nodes(const Node* node); //return appropriate lambda for node
 		//float calc_nodes(const Node* node);
 		void calc_func(const Tree* tree);
 	};
 
 	class Parser {
 	private:
-		static inline std::set<std::string> cop_set{ "log", "sin", "cos", "tan", "sqrt", "ceil", "floor", "round", "abs" , "mod" };
+		static inline std::set<std::string> cop_set{ "log", "sin", "cos", "tan", "sqrt", "ceil", "floor", "round", "abs" , "mod" }; //available functions
 		Tree tree;
 		Expression expression{};
-		Node* rcalcNode(const std::vector<token>::reverse_iterator& rit_begin, const std::vector<token>::reverse_iterator& rit_end);
-		bool buildTokenTree();
+		Node* rcalc_node(const std::vector<token>::reverse_iterator& rit_begin, const std::vector<token>::reverse_iterator& rit_end); //fills token tree (by reverse from token list)
+		bool build_token_tree();
 		std::vector<token> tokens;
 		void check_str_sstream(std::stringstream& str_ss);
 		void check_num_sstream(std::stringstream& num_ss);
-		void tokenize(std::string& str);
-		void set_func();
-		//void optizmieTree();//maybe could later create this (to for example calculate multiple multiplications at one, first time) (or maybe add this method to expr tree?)
+		void tokenize(std::string& str); //tokenizes inputted string
+		void set_func(); //assigns and calculates tree to expression
 	public:
 		Parser() = default;
-		void parse(std::string& str);
+		void parse(std::string& str); //parse input
 		std::map<std::string, float> get_args();
-		void set_args(const float x);
+		void set_args(const float x); //set inputted function variables
 		void set_args(const std::string& name, const float value);
 		void set_args(const std::pair<std::string, float>& arg);
 		void set_args(const std::map<std::string, float>& args);
 		void set_args(const float x, const std::map<std::string, float>& args);
-		float calculate()const;
+		float calculate()const; //calculates already parsed expression
 		float calculate(const float x);
 		float calculate(const std::string& name, const float value);
 		float calculate(const std::pair<std::string, float>& arg);

@@ -68,7 +68,7 @@ glm::vec2 Function::getCenterNDC() {
 	return (glm::vec2(xcenter, ycenter)+1.0f)/2.0f;
 }
 
-void Function::recalculatePoints() {
+void Function::recalculatePoints() { 
 	const float indent = 1.0f/(static_cast<float>(calc_points_count)/2.0f);
 	float left = -xcenter-1.0f-indent;
 	std::lock_guard lg(m);
