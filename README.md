@@ -133,7 +133,7 @@ To get started with the Offline Graphic Calculator, follow these steps:
 
 ## Limitations
  - MacOS and Linux family operating systems are not supported
- - GPU's with super old drivers
+ - GPU's with super old drivers are not supported
 
 ## Used Technologies
 
