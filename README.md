@@ -13,6 +13,8 @@ The Offline Graphic Calculator is a tool designed to calculate and display mathe
 [Launching the application](#launching-the-application) •
 [Features](#features) •
 [Usage](#usage) •
+[Technical requirements](#technical-requirements) •
+[Limitations](#limitations) •
 [Used Technologies](#used-technologies) •
 [References](#references) •
 [Roadmap](#roadmap) •
