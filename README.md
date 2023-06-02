@@ -129,6 +129,10 @@ To get started with the Offline Graphic Calculator, follow these steps:
 
  - The application is super lightweight and will run on almost any machine. Supported by graphical cards, running graphical drivers, released since 2010. Minimum Windows XP is recommended.
 
+## Limitations
+ - MacOS and Linux family operating systems are not supported
+ - GPU's with super old drivers
+
 ## Used Technologies
 
 ### Indirect
