@@ -106,7 +106,7 @@ The user can directly open the program by running the [Graphical Calculator.exe]
 </details>
 
 <details open> 
-<summary> 5. Support for an *infinite* number of functions. </summary> 
+<summary> 5. Support for an infinite number of functions. </summary> 
 <img src="https://github.com/diliny867/Graphical-Calculator/assets/100518672/b1eaef42-e5f4-4353-a2a8-f212b3b315c7" width="400" height="400" />
 
 </details>
