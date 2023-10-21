@@ -13,6 +13,8 @@ The Offline Graphic Calculator is a tool designed to calculate and display mathe
 [Launching the application](#launching-the-application) •
 [Features](#features) •
 [Usage](#usage) •
+[Technical requirements](#technical-requirements) •
+[Limitations](#limitations) •
 [Used Technologies](#used-technologies) •
 [References](#references) •
 [Roadmap](#roadmap) •
@@ -104,7 +106,7 @@ The user can directly open the program by running the [Graphical Calculator.exe]
 </details>
 
 <details open> 
-<summary> 5. Support for an *infinite* number of functions. </summary> 
+<summary> 5. Support for an infinite number of functions. </summary> 
 <img src="https://github.com/diliny867/Graphical-Calculator/assets/100518672/b1eaef42-e5f4-4353-a2a8-f212b3b315c7" width="400" height="400" />
 
 </details>
@@ -128,6 +130,10 @@ To get started with the Offline Graphic Calculator, follow these steps:
 ## Technical requirements
 
  - The application is super lightweight and will run on almost any machine. Supported by graphical cards, running graphical drivers, released since 2010. Minimum Windows XP is recommended.
+
+## Limitations
+ - MacOS and Linux family operating systems are not supported
+ - GPUs with super old drivers are not supported
 
 ## Used Technologies
 
