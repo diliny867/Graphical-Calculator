@@ -659,7 +659,7 @@ void ImGui_ImplGlfw_NewFrame()
     ImGuiIO& io = ImGui::GetIO();
     ImGui_ImplGlfw_Data* bd = ImGui_ImplGlfw_GetBackendData();
     IM_ASSERT(bd != nullptr && "Did you call ImGui_ImplGlfw_InitForXXX()?");
-
+    
     // Setup display size (every frame to accommodate for window resizing)
     int w, h;
     int display_w, display_h;

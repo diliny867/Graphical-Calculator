@@ -9,16 +9,16 @@ Function::Function(): Function(800, 600) {}
 
 void Function::setFunction(std::string& str) {
 	//std::cout<<str<<std::endl;
-	expr_str_parser.parse(str);
+	expr_str_parser.Parse(str);
 }
 
 glm::vec2 Function::calcPointScrPos(const glm::vec2 screenPos) {
 	std::lock_guard lg(m);
-	return {screenPos.x, (expr_str_parser.calculate((screenPos.x-xcenter)*xsize)/ysize-ycenter)};
+	return {screenPos.x, (expr_str_parser.Calculate((screenPos.x-xcenter)*xsize)/ysize-ycenter)};
 }
 float Function::calcAtScrPos(const glm::vec2 screenPos) {
 	std::lock_guard lg(m);
-	return expr_str_parser.calculate((screenPos.x-xcenter)*xsize);
+	return expr_str_parser.Calculate((screenPos.x-xcenter)*xsize);
 }
 
 
@@ -73,23 +73,8 @@ void Function::recalculatePoints() {
 	float left = -xcenter-1.0f-indent;
 	std::lock_guard lg(m);
 	for (int i = 0; i<calc_points_count+2; i++) {
-		points[i] = glm::vec2((-1.0f-indent+static_cast<float>(i)*indent), (expr_str_parser.calculate(left * xsize)/ysize));
+		points[i] = glm::vec2((-1.0f-indent+static_cast<float>(i)*indent), static_cast<float>(expr_str_parser.Calculate(left * xsize)/ysize));
 		left += indent;
 	}
+
 }
-
-//#include <thread>
-//void Function::recalculate_points_thread(const std::function<void(GLuint)>& callback, const GLuint vbo) {
-//	const float indent = 1.0f/(static_cast<float>(calc_points_count)/2.0f);
-//	//std::cout<<indent<<std::endl;
-//	float left = -xcenter-1.0f-indent;
-//	//std::cout<<xsize<<" "<<ysize<<std::endl;
-//	for (int i = 0; i<calc_points_count+2; i++) {
-//		points[i] = glm::vec2((-1.0f-indent+static_cast<float>(i)*indent), (expr_str_parser.calculate(left * xsize)/ysize));
-//		//std::cout<<-1.0f-indent+static_cast<float>(i)*indent<<std::endl;
-//		//std::cout<<"x:" << points.back().x << " y:" << points.back().y <<std::endl;
-//		left += indent;
-//	}
-//	callback(vbo);
-//}
-

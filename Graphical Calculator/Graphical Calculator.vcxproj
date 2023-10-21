@@ -35,12 +35,30 @@
     <ClCompile Include="myGL\VAO.cpp" />
     <ClCompile Include="myGL\VBO.cpp" />
     <ClCompile Include="src\ExprStrParser.cpp" />
+    <ClCompile Include="src\ExprStrTokenizer.cpp" />
     <ClCompile Include="src\Function.cpp" />
     <ClCompile Include="src\Source.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\ExprStrParser.h" />
+    <ClInclude Include="include\ExprtStrTokenizer.h" />
     <ClInclude Include="include\Function.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="resources\shaders\coordAxisNumbersShader_fs.glsl" />
+    <None Include="resources\shaders\coordAxisNumbersShader_gs.glsl" />
+    <None Include="resources\shaders\coordAxisNumbersShader_vs.glsl" />
+    <None Include="resources\shaders\coordAxisShader_fs.glsl" />
+    <None Include="resources\shaders\coordAxisShader_gs.glsl" />
+    <None Include="resources\shaders\coordAxisShader_vs.glsl" />
+    <None Include="resources\shaders\function_fs.glsl" />
+    <None Include="resources\shaders\function_gs.glsl" />
+    <None Include="resources\shaders\function_vs.glsl" />
+    <None Include="resources\shaders\mouseDot_fs.glsl" />
+    <None Include="resources\shaders\mouseDot_vs.glsl" />
+    <None Include="resources\shaders\textShader_fs.glsl" />
+    <None Include="resources\shaders\textShader_gs.glsl" />
+    <None Include="resources\shaders\textShader_vs.glsl" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>

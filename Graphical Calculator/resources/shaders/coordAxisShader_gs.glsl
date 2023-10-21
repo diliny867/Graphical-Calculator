@@ -13,7 +13,7 @@ out vec3 color;
 float gridSize = 10.0; //making it as uniform breaks it somehow
 float logDivision = 1.0/log(gridSize);
 
-void main() { //shader that makes some functions non connected (like 1/x not connected in center)
+void main() {
 	vec2 exp_ = ceil(logDivision*log(size));
 	vec2 v = pow(vec2(gridSize),exp_);
 	vec2 interval = (v/size)/10.0;

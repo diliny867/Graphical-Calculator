@@ -22,7 +22,7 @@
 #include "../myGL/Shader.h"
 #include "../myGL/VAO.h"
 #include "../myGL/VBO.h"
-#include "../myGL/EBO.h"
+//#include "../myGL/EBO.h" //unused
 #include "../myGL/Time.h"
 #include "../myGL/Texture2D.h"
 
@@ -41,8 +41,8 @@ void RenderText(const Shader& shader, std::string text, float x, float y, float 
 void RenderAxisNumbers(const Shader& shader, glm::vec2 center, glm::vec2 size, float scale, glm::vec3 color);
 std::function<void()> ViewpointUpdateShaderCallback;
 
-float SCR_WIDTH = 1000;
-float SCR_HEIGHT = 1000;
+float SCR_WIDTH = 900;
+float SCR_HEIGHT = 900;
 
 class Mouse {
 public:
@@ -63,20 +63,9 @@ Mouse mouse(SCR_WIDTH/2.0f, SCR_HEIGHT/2.0f);
 //bool wheel_scrolled = false;
 //bool leftPressed = false;
 
-//assign values for update thresholds
-/* currently unused
-float last_updated_mouse_x = mouse.pos.x;
-float last_updated_mouse_y = mouse.pos.y;
-constexpr float mouse_move_update_threshold = 10.0f; //px
-
-float last_updated_size_x = 20.0f;
-float last_updated_size_y = 20.0f;
-constexpr float size_update_threshold = 0.1f; // %/100
-*/
 
 //constexpr float defaultMarkerSize = 0.002f;
 //float markerSize = defaultMarkerSize;
-
 
 struct Character {
     GLuint TextureID; // ID handle of the glyph texture
@@ -197,7 +186,7 @@ int main() {
 
     srand(static_cast<unsigned int>(time(NULL)));
 
-    { //FreeType
+    { //FreeType (thx https://learnopengl.com, copied from it)
         FT_Library ft;
         // All functions return a value different than 0 whenever an error occurred
         if (FT_Init_FreeType(&ft)) {
@@ -266,8 +255,7 @@ int main() {
 
     Time::Init();
 
-    //Shader funcShader("resources/shaders/shader_vs.glsl", "resources/shaders/shader_gs.glsl", "resources/shaders/shader_fs.glsl");
-    Shader funcShader("resources/shaders/shader2_vs.glsl", "resources/shaders/shader2_gs.glsl", "resources/shaders/shader2_fs.glsl");
+    Shader funcShader("resources/shaders/function_vs.glsl", "resources/shaders/function_gs.glsl", "resources/shaders/function_fs.glsl");
     Shader coordAxisShader("resources/shaders/coordAxisShader_vs.glsl", "resources/shaders/coordAxisShader_gs.glsl", "resources/shaders/coordAxisShader_fs.glsl");
     Shader coordAxisNumbersShader("resources/shaders/coordAxisNumbersShader_vs.glsl", "resources/shaders/coordAxisNumbersShader_fs.glsl");
     Shader textShader("resources/shaders/textShader_vs.glsl", "resources/shaders/textShader_fs.glsl");
@@ -319,7 +307,7 @@ int main() {
     coordAxisShader.setVec3("gridColor", coordAxisGridColor);
 
     ViewpointUpdateShaderCallback = [&]() { //set up callback
-        funcShader.use();
+    	funcShader.use();
         funcShader.setVec2("resolution", SCR_WIDTH, SCR_HEIGHT);
         projection = glm::ortho(0.0f, SCR_WIDTH, 0.0f, SCR_HEIGHT);
         coordAxisNumbersShader.use();
@@ -501,20 +489,20 @@ int main() {
                 }
                 ImGui::SameLine();
                 if (ImGui::Button((blank_indent+"Variables").c_str())) {
-                    if (!functions[i]->function.expr_str_parser.get_args().empty()) {
+                    if (!functions[i]->function.expr_str_parser.GetArgs().empty()) {
                         ImGui::OpenPopup((blank_indent+"Variables").c_str());
                     }
                 }
                 if (ImGui::BeginPopup((blank_indent+"Variables").c_str())) {
-                    for (auto& arg: functions[i]->function.expr_str_parser.get_args()) {
-                        if (ImGui::InputFloat((blank_indent+arg.first).c_str(), &arg.second)) {
-                            functions[i]->function.expr_str_parser.set_args(arg);
+                    for (auto& arg: functions[i]->function.expr_str_parser.GetArgs()) {
+                        if (ImGui::InputDouble((blank_indent+arg.first).c_str(), &arg.second)) {
+                            functions[i]->function.expr_str_parser.SetArgs(arg.first,arg.second);
                             functions[i]->function.needs_personal_update = true;
                         }
                         ImGui::SameLine();
                         const float inc = abs(arg.second/10.0f);
-                        if (ImGui::DragFloat(arg.first.c_str(), &arg.second, inc==0.0f?0.001f:(inc>1000.0f?1000.0f:inc))) {
-                            functions[i]->function.expr_str_parser.set_args(arg);
+                        if (ImGui::DragFloat2(arg.first.c_str(), (float*)&arg.second, inc==0.0f?0.001f:(inc>1000.0f?1000.0f:inc))) {
+                            functions[i]->function.expr_str_parser.SetArgs(arg.first,arg.second);
                             functions[i]->function.needs_personal_update = true;
                         }
                     }
@@ -524,11 +512,11 @@ int main() {
                 ImGui::ColorEdit3(blank_indent.c_str(), value_ptr(functions[i]->color), ImGuiColorEditFlags_NoInputs);
                 ImGui::SameLine();
                 if (ImGui::InputText(blank_indent.c_str(), &functions[i]->inputData)) {
-                    auto last_args = functions[i]->function.expr_str_parser.get_args();
+                    auto last_args = functions[i]->function.expr_str_parser.GetArgs();
                     functions[i]->function.setFunction(functions[i]->inputData);
 
-                    for (auto& arg: functions[i]->function.expr_str_parser.get_args()) {
-                        functions[i]->function.expr_str_parser.set_args(arg.first, last_args[arg.first]);
+                    for (auto& arg: functions[i]->function.expr_str_parser.GetArgs()) {
+                        functions[i]->function.expr_str_parser.SetArgs(arg.first, last_args[arg.first]);
                     }
                     //functions[i]->futures.push_back({ std::async(std::launch::async, [&, i] {functions[i]->function.recalculatePoints(); }) });
                     functions[i]->futures.push({ std::async(std::launch::async, [&, i] {functions[i]->function.recalculatePoints(); }) });
@@ -575,7 +563,7 @@ int main() {
 
         glLineWidth(3);
         funcShader.use();
-        for (std::size_t i = 0; i<functions.size(); i++) { //check if function recalculated
+        for (std::size_t i = 0; i<functions.size(); i++) { //check if function recalculated and draw it
             if (!functions[i]->show) { continue; }
             if (Function::needs_update) {
                 //functions[i]->futures.push_back({ std::async(std::launch::async, [&, i] {functions[i]->function.recalculatePoints(); }) });

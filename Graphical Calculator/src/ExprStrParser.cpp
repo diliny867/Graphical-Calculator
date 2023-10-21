@@ -1,13 +1,13 @@
 ﻿#include "../include/ExprStrParser.h"
 
-namespace ExprStrParser {
+#include <iostream>
+#include <sstream>
+#include <cmath>
+#include <limits>
 
-#define pi_str "3.14159265358979323846"
-#define e_str  "2.71828182845904523536"
-	const std::map<std::string, std::string> math_consts{ {"pi", pi_str}, {"e", e_str} };
+namespace ExprStrParser { //TODO: Fix comma
 
-//macro to compares two strings
-#define str_compare(s1, s2) (std::strcmp(s1, s2) == 0)
+#define str_compare(s1, s2) (s1.compare(s2) == 0)
 
 	void Node::print(const std::string& prefix, const bool isLeft) const {
 		std::cout << prefix;
@@ -15,483 +15,325 @@ namespace ExprStrParser {
 		//std::cout << this << std::endl;
 		std::cout << value << std::endl;
 
-		if (left!=nullptr) {
-			left->print(prefix + (isLeft ? "|   " : "    "), true);
-		}
-		if (right!=nullptr) {
-			right->print(prefix + (isLeft ? "|   " : "    "), false);
-		}
-	}
-
-	void Tree::print() const {
-		head->print("", false);
-	}
-
-
-	void Expression::calc_func(const Tree* tree) {
-		try {
-			expr = calc_nodes(tree->head);
-		} catch (error_codes err) {
-			expr = []() {return std::nanf(""); };
-		}
-	}
-
-	std::function<float()> Expression::calc_nodes(const Node* node) {
-		if (node == nullptr) { throw SOLVE_ERROR; }
-		const token curr_token = node->value;
-
-		switch (curr_token.symb) {
-		case NUM://NUM and STR cover the case when both left and right nodes are nullptr (leaf)
-			return [=]() {return std::stof(curr_token.val); };
-		case STR:
-			if (curr_token.val == "x") {
-				return[=]() {return x; };
-			} else {
-				return [=]() {return func_args[curr_token.val]; };
+		if (node_count>0) {
+			nodes[0]->print(prefix + (isLeft ? "|   " : "    "), true);
+			for(std::size_t i=1;i<node_count;i++) {
+				nodes[i]->print(prefix + (isLeft ? "|   " : "    "), false);
 			}
-		case OP:
+		}
+	}
+
+	void Expression::calcFunc(const Node* tree) {
+		expr = calcNodes(tree);
+	}
+
+	std::function<double()>* Expression::GetInternalFunction() {
+		return &expr;
+	}
+
+	std::function<double()> Expression::calcNodes(const Node* node) {
+		if(node == nullptr) { return []() { return std::numeric_limits<double>::quiet_NaN();}; }
+		const Token curr_token = node->value;
+
+		const auto calculated_nodes = new std::function<double()>[node->node_count];
+
+		for(std::size_t i=0;i<node->node_count;i++) {
+			calculated_nodes[i] = calcNodes(node->nodes[i]);
+		}
+		
+		switch (curr_token.type) {
+		case Token::Number: 
 		{
-			const auto left = calc_nodes(node->left);
-			if (str_compare(curr_token.val.c_str(), "!")) {
-				return [=]() {return std::tgamma(left()+1.0f); };
-			}
-			const auto right = calc_nodes(node->right);
-			if (str_compare(curr_token.val.c_str(), "+")) {
-				return [=]() {return left()+right(); };
-			}
-			if (str_compare(curr_token.val.c_str(), "-")) {
-				return [=]() {return left()-right(); };
-			}
-			if (str_compare(curr_token.val.c_str(), "*")) {
-				return [=]() {return left()*right(); };
-			}
-			if (str_compare(curr_token.val.c_str(), "/")) {
-				return [=]() {return left()/right(); };
-			}
-			if (str_compare(curr_token.val.c_str(), "^")) {
-				return [=]() {return pow(left(), right()); };
-			}
+			const double num = std::stod(curr_token.val.data());
+			return [=]() {return num; };
 		}
-		break;
-		case COP:
+		case Token::Identifier:
 		{
-			const auto right = calc_nodes(node->right);
-			if (str_compare(curr_token.val.c_str(), "log")) {
-				return [=]() {return std::log(right()); };
-			}
-			if (str_compare(curr_token.val.c_str(), "sin")) {
-				return [=]() {return sin(right()); };
-			}
-			if (str_compare(curr_token.val.c_str(), "cos")) {
-				return [=]() {return cos(right()); };
-			}
-			if (str_compare(curr_token.val.c_str(), "tan")) {
-				return [=]() {return tan(right()); };
-			}
-			if (str_compare(curr_token.val.c_str(), "sqrt")) {
-				return [=]() {return sqrt(right()); };
-			}
-			if (str_compare(curr_token.val.c_str(), "ceil")) {
-				return [=]() {return ceil(right()); };
-			}
-			if (str_compare(curr_token.val.c_str(), "floor")) {
-				return [=]() {return floor(right()); };
-			}
-			if (str_compare(curr_token.val.c_str(), "round")) {
-				return [=]() {return round(right()); };
-			}
-			if (str_compare(curr_token.val.c_str(), "abs")) {
-				return [=]() {return abs(right()); };
-			}
-			if (str_compare(curr_token.val.c_str(), "mod")) {
-				const auto left = calc_nodes(node->left);
-				return [=]() {return std::fmod(left(), right()); };
-			}
-		}
-		break;
-		case NUL:
-			return []() {return 0.0f; };
-		}
-		return []() {return 0.0f; };
-	}
-
-	void Parser::check_str_sstream(std::stringstream& str_ss) { // TODO: parse things like x123
-		if (!str_ss.str().empty()) {
-			std::string str_;
-			str_ss>>str_;
-			if (!tokens.empty()) {
-				if (tokens.back().symb == NUM || tokens.back().symb == STR || str_compare(tokens.back().val.c_str(), ")")) {
-					tokens.push_back(token("*", OP));
-				}
-			}
-			if (cop_set.count(str_)) { //if complex operator
-				tokens.push_back(token(str_, COP));
-			} else if (math_consts.count(str_)) { //if math constant
-				tokens.push_back(token(math_consts.at(str_), NUM));
-			} else { //other variable
-				//for (const auto& ch : str_) { //converts abc to a*b*c
-				//	tokens.push_back(token(std::string(1, ch), STR));
-				//	if (tokens.back().val == "x") {
-				//		expression.x = 0.0f;
-				//	} else {
-				//		expression.func_args[tokens.back().val] = 0.0f;
-				//	}
-				//	tokens.push_back(token("*", OP));
-				//}
-				//tokens.pop_back();
-
-				tokens.push_back(token(str_, STR));
-			}
-			str_ss = std::stringstream();
-		}
-	}
-	void Parser::check_num_sstream(std::stringstream& num_ss) {
-		if (!num_ss.str().empty()) {
-			tokens.push_back(token(num_ss.str(), NUM));
-			num_ss = std::stringstream();
-		}
-	}
-
-	void Parser::tokenize(std::string& str) { //tokenizes inputted string
-		tokens.reserve(str.size());
-		std::stringstream num_ss;
-		std::stringstream str_ss;
-
-		for (auto it = str.begin(); it != str.end(); ++it) {
-			if (*it==' ') { continue; }
-			if (isdigit(*it) || *it == '.') {
-				num_ss<<*it;
-				check_str_sstream(str_ss);
+			if(curr_token.val == "x") {
+				return[=]() {
+					return *x_var;
+				};
 			} else {
-				check_num_sstream(num_ss);
-				if (ispunct(*it)) { //if not letter
-					check_str_sstream(str_ss);
-					if (*it == '-') {
-						if (tokens.empty() || str_compare(tokens.back().val.c_str(), "(")) {  //if - is first
-							tokens.push_back(token("0", NUM));
-						}
-					}
-					if (*it == '(') {
-						if (!tokens.empty()) {
-							if (tokens.back().symb == NUM || tokens.back().symb == STR || str_compare(tokens.back().val.c_str(), ")")) { //if multiplying brackets
-								tokens.push_back(token("*", OP));
-							}
-						}
-					}
-					tokens.push_back(token(std::string(1, *it), OP));
-				} else { //letter
-					str_ss<<*it;
-					if (math_consts.count(str_ss.str())) {
-						if (!tokens.empty()) {
-							if (tokens.back().symb == NUM || tokens.back().symb == STR || str_compare(tokens.back().val.c_str(), ")")) {
-								tokens.push_back(token("*", OP));
-							}
-						}
-						tokens.push_back(token(math_consts.at(str_ss.str()), NUM));
-						str_ss = std::stringstream();
-					}
-					//else {
-						//std::string str_ = str_ss.str();
-						//
-						//for (auto rit = str_.rbegin(); rit<str_.rend(); ++rit) {
-						//	
-						//	if (cop_set.count(std::string(rit.base(), str_.rbegin().base()))) {
-						//		//const token new_cop_token = token(std::string(rit.base(), str_.rbegin().base()), COP);
-						//		for(auto _it = str_.begin(); _it<rit.base(); ++_it) {
-						//			//std::cout<<*_it;
-						//			tokens.push_back(token(std::string(1, *_it), STR));
-						//			tokens.push_back(token("*", OP));
-						//		}
-						//		//tokens.push_back(new_cop_token);
-						//		str_ss = std::stringstream();
-						//		break;
-						//	}
-						//}
-					//}
-				}
+				const std::string func_name = std::string(curr_token.val.data());
+				return [=]() {return (*other_vars)[func_name]; };
 			}
 		}
-		check_num_sstream(num_ss);
-		check_str_sstream(str_ss);
+		case Token::Plus:
+			return [=]() {return calculated_nodes[0]()+calculated_nodes[1](); };
+		case Token::Minus:
+			return [=]() {return calculated_nodes[0]()-calculated_nodes[1](); };
+		case Token::Star:
+			return [=]() {return calculated_nodes[0]()*calculated_nodes[1](); };
+		case Token::Slash:
+			return [=]() {return calculated_nodes[0]()/calculated_nodes[1](); };
+		case Token::Caret:
+			return [=]() {return std::pow(calculated_nodes[0](), calculated_nodes[1]()); };
+		case Token::ExclamationMark:
+			return [=]() {return std::tgamma(calculated_nodes[0]()+1.0); };
+		case Token::Function:
+			if (str_compare(curr_token.val,"log")) {
+				return [=]() {return std::log(calculated_nodes[0]()); };
+			}
+			if (str_compare(curr_token.val, "sin")) {
+				return [=]() {return std::sin(calculated_nodes[0]()); };
+			}
+			if (str_compare(curr_token.val, "cos")) {
+				return [=]() {return std::cos(calculated_nodes[0]()); };
+			}
+			if (str_compare(curr_token.val, "tan")) {
+				return [=]() {return std::tan(calculated_nodes[0]()); };
+			}
+			if (str_compare(curr_token.val, "arcsin")) {
+				return [=]() {return std::asin(calculated_nodes[0]()); };
+			}
+			if (str_compare(curr_token.val, "arccos")) {
+				return [=]() {return std::acos(calculated_nodes[0]()); };
+			}
+			if (str_compare(curr_token.val, "arctan")) {
+				return [=]() {return std::atan(calculated_nodes[0]()); };
+			}
+			if (str_compare(curr_token.val, "sqrt")) {
+				return [=]() {return std::sqrt(calculated_nodes[0]()); };
+			}
+			if (str_compare(curr_token.val, "ceil")) {
+				return [=]() {return std::ceil(calculated_nodes[0]()); };
+			}
+			if (str_compare(curr_token.val, "floor")) {
+				return [=]() {return std::floor(calculated_nodes[0]()); };
+			}
+			if (str_compare(curr_token.val, "round")) {
+				return [=]() {return std::round(calculated_nodes[0]()); };
+			}
+			if (str_compare(curr_token.val, "abs")) {
+				return [=]() {return std::abs(calculated_nodes[0]()); };
+			}
+			if (str_compare(curr_token.val, "mod")) {
+				return [=]() {return std::fmod(calculated_nodes[0](), calculated_nodes[1]()); };
+			}
+			if (str_compare(curr_token.val, "logn")) {
+				return [=]() {return std::log(calculated_nodes[0]())/std::log(calculated_nodes[1]()); };
+			}
+			break;
+		default:
+			return []() {return 0.0; };
+		}
+		return []() {return 0.0; };
 	}
 
-	bool Parser::build_token_tree() {
+	bool Parser::buildTokenTree() {
 		try {
-			tree.head = rcalc_node(tokens.rbegin(), tokens.rend());
-			tokens.clear();
+			tree = rcalcNode(tokenizer.tokens.crbegin(), tokenizer.tokens.crend());
+			tokenizer.tokens.clear();
 			return true;
-		} catch (error_codes err) {
-			tokens.clear();
+		} catch (std::exception& e) {
+			tokenizer.tokens.clear();
 			return false;
-			//std::cout<<"ERROR: PARSE ERROR"<<std::endl;
 		}
 	}
 
-	Node* Parser::rcalc_node(const std::vector<token>::reverse_iterator& rit_begin, const std::vector<token>::reverse_iterator& rit_end) {
+	Node* Parser::rcalcNode(const std::vector<Token>::const_reverse_iterator& rit_begin, const std::vector<Token>::const_reverse_iterator& rit_end) {
 		if (rit_end-rit_begin <= 0) {
-			throw PARSE_ERROR;
+			throw std::exception("PARSE ERROR");	
 		}
-		if (rit_end-rit_begin == 1) {//leaf (symb == NUM or STR)
-			return new Node(*rit_begin);
+		if (rit_end-rit_begin == 1) { //leaf
+			if(rit_begin->type == Token::Number || rit_begin->type == Token::Identifier) {
+				return new Node(*rit_begin);
+			}
+			throw std::exception("PARSE ERROR");	
 		}
 
-		if (str_compare(rit_begin->val.c_str(), ")") && str_compare((rit_end-1)->val.c_str(), "(")) {//strips expression of side brackets
-			int level = 0;
-			for (auto rit = rit_begin+1; rit<rit_end-1; ++rit) {//?temporary solution
-				if (rit->val == "(") {
-					--level;
-					if (level < 0) {
-						break;
-					}
-					continue;
-				}
-				if (rit->val == ")") {
-					++level;
-					continue;
-				}
+		{
+			auto rit_tmp_begin = rit_begin;
+			auto rit_tmp_end = rit_end-1;
+			int count = 0;
+			while(rit_tmp_begin->type == Token::CloseParenthesis && rit_tmp_end->type == Token::OpenParenthesis) {
+				++rit_tmp_begin;
+				--rit_tmp_end;
+				count++;
 			}
-			if (level == 0) {
-				return rcalc_node(rit_begin + 1, rit_end - 1);
+			if(count) {
+				return rcalcNode(rit_begin + count, rit_end - count);
 			}
 		}
 
 		Node* curr_node;
 
-		if ((rit_end-1)->symb == COP) {//process COP
-			if (rit_begin->val == ")" && (rit_end-2)->val == "(") {
+		if ((rit_end-1)->type == Token::Function) { //process COP
+			if (rit_begin->type == Token::CloseParenthesis && (rit_end-2)->type == Token::OpenParenthesis) {
 				int level = 0;
 				for (auto rit = rit_begin+1; rit<rit_end-2; ++rit) {
-					if (rit->val == "(") {
+					if (rit->type == Token::OpenParenthesis){
 						--level;
 						if (level < 0) {
 							break;
 						}
-						continue;
-					}
-					if (rit->val == ")") {
+					}else
+					if (rit->type == Token::CloseParenthesis) {
 						++level;
-						continue;
-					}
-					if (rit->val == "," && level == 0) {
+					}else
+					if (rit->type == Token::Comma && level == 0) {
 						curr_node = new Node(*(rit_end-1));
-						curr_node->left = rcalc_node(rit+1, rit_end-2);
-						curr_node->right = rcalc_node(rit_begin+1, rit);
+						curr_node->node_count = 2;
+						curr_node->nodes = new Node*[2];
+						curr_node->nodes[0] = rcalcNode(rit+1, rit_end-2);
+						curr_node->nodes[1] = rcalcNode(rit_begin+1, rit);
 						return curr_node;
 					}
 				}
 				if (level == 0) {
 					curr_node = new Node(*(rit_end-1));
-					curr_node->right = rcalc_node(rit_begin, rit_end-1);
+					curr_node->node_count = 1;
+					curr_node->nodes = new Node*[1];
+					curr_node->nodes[0] = rcalcNode(rit_begin, rit_end-1);
 					return curr_node;
 				}
 			}
 		}
 
 		int level = 0;
-		for (auto rit = rit_begin; rit<rit_end; ++rit) { //if + or -
-			if (rit->symb == OP) {
-				if (str_compare(rit->val.c_str(), ")")) {
-					++level;
-					continue;
-				}
-				if (str_compare(rit->val.c_str(), "(")) {
-					--level;
-					continue;
-				}
+		for (auto rit = rit_begin; rit<rit_end; ++rit) {
+			switch(rit->type) {
+			case Token::CloseParenthesis:
+				++level;
+				break;
+			case Token::OpenParenthesis:
+				--level;
+				break;
+			case Token::Minus:
+			case Token::Plus:
 				if (level == 0) {
-					if (str_compare(rit->val.c_str(), "-") || str_compare(rit->val.c_str(), "+")) {
-						curr_node = new Node(token(rit->val, OP));
-						curr_node->left = rcalc_node(rit+1, rit_end);
-						curr_node->right = rcalc_node(rit_begin, rit);
-						return curr_node;
-					}
+					curr_node = new Node(Token(*rit));
+					curr_node->node_count = 2;
+					curr_node->nodes = new Node*[2];
+					curr_node->nodes[0] = rcalcNode(rit+1, rit_end);
+					curr_node->nodes[1] = rcalcNode(rit_begin, rit);
+					return curr_node;
 				}
+				break;
 			}
 		}
 
 		level = 0;
-		for (auto rit = rit_begin; rit<rit_end; ++rit) { //if operator, except for ^ and !
-			if (rit->symb == OP) {
-				if (str_compare(rit->val.c_str(), ")")) {
-					++level;
-					continue;
-				}
-				if (str_compare(rit->val.c_str(), "(")) {
-					--level;
-					continue;
-				}
+		for (auto rit = rit_begin; rit<rit_end; ++rit) {
+			switch(rit->type) {
+			case Token::CloseParenthesis:
+				++level;
+				break;
+			case Token::OpenParenthesis:
+				--level;
+				break;
+			case Token::Star:
+			case Token::Slash:
 				if (level == 0) {
-					if (str_compare(rit->val.c_str(), "^") || str_compare(rit->val.c_str(), "!")) { continue; }
 					curr_node = new Node(*rit);
-					curr_node->left = rcalc_node(rit+1, rit_end);
-					curr_node->right = rcalc_node(rit_begin, rit);
+					curr_node->node_count = 2;
+					curr_node->nodes = new Node*[2];
+					curr_node->nodes[0] = rcalcNode(rit+1, rit_end);
+					curr_node->nodes[1] = rcalcNode(rit_begin, rit);
 					return curr_node;
 				}
+				break;
 			}
 		}
 
 		level = 0;
 		for (auto rit = rit_begin; rit<rit_end; ++rit) {// ^ and ! need to be processed separately, because they should affect only the closest token(s)
-			if (rit->symb == OP) {
-				if (str_compare(rit->val.c_str(), ")")) {
-					++level;
-					continue;
-				}
-				if (str_compare(rit->val.c_str(), "(")) {
-					--level;
-					continue;
-				}
+			switch(rit->type) {
+			case Token::CloseParenthesis:
+				++level;
+				break;
+			case Token::OpenParenthesis:
+				--level;
+				break;
+			case Token::Caret:
 				if (level == 0) {
-					if (str_compare(rit->val.c_str(), "^")) {
-						curr_node = new Node(*rit);
-						curr_node->left = rcalc_node(rit+1, rit_end);
-						curr_node->right = rcalc_node(rit_begin, rit);
-						return curr_node;
-					}
-					if (str_compare(rit->val.c_str(), "!")) {
-						curr_node = new Node(*rit);
-						curr_node->left = rcalc_node(rit+1, rit_end);
-						return curr_node;
-					}
+					curr_node = new Node(*rit);
+					curr_node->node_count = 2;
+					curr_node->nodes = new Node*[2];
+					curr_node->nodes[0] = rcalcNode(rit+1, rit_end);
+					curr_node->nodes[1] = rcalcNode(rit_begin, rit);
+					return curr_node;
 				}
+				break;
+			case Token::ExclamationMark:
+				if (level == 0) {
+					curr_node = new Node(*rit);
+					curr_node->node_count = 1;
+					curr_node->nodes = new Node*[1];
+					curr_node->nodes[0] = rcalcNode(rit+1, rit_end);
+					return curr_node;
+				}
+				break;
 			}
 		}
 
-		return nullptr;
+		throw std::exception("PARSE ERROR");	
 	}
 
-	void Parser::set_func() {
-		expression.calc_func(&tree);
-	}
-
-	void Parser::parse(std::string& str) {
-		expression.func_args.clear();
-		tokenize(str);
-		//for (const auto& token: tokens) {
-		//	std::cout<< token.val <<" ";
-		//	//std::cout << token.val << " " << token.symb << std::endl;
-		//}
-		//std::cout<<std::endl;
-		if (build_token_tree()) {
-			set_func();
+	void Parser::Parse(std::string& str) {
+		tokenizer.Tokenize(str);
+		if (buildTokenTree()) {
+			curr_expression.calcFunc(tree);
 		}else {
-			expression.expr = []() {return std::nanf(""); };
+			curr_expression.expr = []() {return std::numeric_limits<double>::quiet_NaN(); };
 		}
-		//for (auto it = expression.func_args.begin(); it!=expression.func_args.end();++it) {
-		//	std::cout<<it->first<<" ";
-		//}
-		//tree.print();
+		//tree.print("",false);
 	}
 
-	std::map<std::string, float> Parser::get_args() {
-		return expression.func_args;
+	Expression Parser::CopyExpression() {
+		return curr_expression;
 	}
 
-	void Parser::set_args(const float x) {
-		expression.x = x;
+	std::map<std::string, double> Expression::GetArgs() {
+		return *other_vars;
 	}
-	void Parser::set_args(const std::string& name, const float value) {
-		expression.func_args[name] = value;
+	void Expression::SetArgs(const double x) {
+		*x_var = x;
 	}
-	void Parser::set_args(const std::pair<std::string, float>& arg) {
-		expression.func_args[arg.first] = arg.second;
+	void Expression::SetArgs(const std::string& name, const double value) {
+		(*other_vars)[name] = value;
 	}
-	void Parser::set_args(const std::map<std::string, float>& args) {
-		expression.func_args = args;
+	void Expression::SetArgs(const std::map<std::string, double>& args) {
+		*other_vars = args;
 	}
-	void Parser::set_args(const float x, const std::map<std::string, float>& args) {
-		expression.x = x;
-		expression.func_args = args;
+	double Expression::Calculate() {
+		return expr();
 	}
-	float Parser::calculate() const {
-		return expression.expr();
+	double Expression::Calculate(const double x) {
+		*x_var = x;
+		return expr();
 	}
-	float Parser::calculate(const float x) {
-		expression.x = x;
-		return expression.expr();
+	double Expression::Calculate(const std::string& name, const double value) {
+		(*other_vars)[name] = value;
+		return expr();
 	}
-	float Parser::calculate(const std::string& name, const float value) {
-		expression.func_args[name] = value;
-		return expression.expr();
-	}
-	float Parser::calculate(const std::pair<std::string, float>& arg) {
-		expression.func_args[arg.first] = arg.second;
-		return expression.expr();
-	}
-	float Parser::calculate(const std::map<std::string, float>& args) {
-		expression.func_args = args;
-		return expression.expr();
-	}
-	float Parser::calculate(const float x, const std::map<std::string, float>& args) {
-		expression.x = x;
-		expression.func_args = args;
-		return expression.expr();
+	double Expression::Calculate(const std::map<std::string, double>& args) {
+		*other_vars = args;
+		return expr();
 	}
 
+	std::map<std::string, double> Parser::GetArgs() {
+		return curr_expression.GetArgs();
+	}
+	void Parser::SetArgs(const double x) {
+		curr_expression.SetArgs(x);
+	}
+	void Parser::SetArgs(const std::string& name, const double value) {
+		curr_expression.SetArgs(name, value);
+	}
+	void Parser::SetArgs(const std::map<std::string, double>& args) {
+		curr_expression.SetArgs(args);
+	}
+	double Parser::Calculate() {
+		return curr_expression.Calculate();
+	}
+	double Parser::Calculate(const double x) {
+		return curr_expression.Calculate(x);
+	}
+	double Parser::Calculate(const std::string& name, const double value) {
+		return curr_expression.Calculate(name,value);
+	}
+	double Parser::Calculate(const std::map<std::string, double>& args) {
+		return curr_expression.Calculate(args);
+	}
 }
-
-//using these std::maps with lambdas (in calc_nodes()) is slower, than comparing to strings
-//std::map<std::string, std::function<std::function<float()>(std::function<float()>, std::function<float()>)>> op_set{
-//	{"+",
-//		[](const std::function<float()>& left, const std::function<float()>& right)->std::function<float()> {
-//			return [=]() {
-//				return left()+right();
-//			};
-//		}
-//	}, {"-",
-//		[](const std::function<float()>& left, const std::function<float()>& right)->std::function<float()> {
-//			return [=]() {
-//				return left()-right();
-//			};
-//		}
-//	}, {"*",
-//		[](const std::function<float()>& left, const std::function<float()>& right)->std::function<float()> {
-//			return [=]() {
-//				return left()*right();
-//			};
-//		}
-//	}, {"/",
-//		[](const std::function<float()>& left, const std::function<float()>& right)->std::function<float()> {
-//			return [=]() {
-//				return left()/right();
-//			};
-//		}
-//	}, {"^",
-//		[](const std::function<float()>& left, const std::function<float()>& right)->std::function<float()> {
-//			return [=]() {
-//				return pow(left(), right());
-//			};
-//		}
-//	} };
-//std::map<std::string, std::function<std::function<float()>(std::function<float()>)>> cop_set{
-//	{"log",
-//		[](const std::function<float()>& func)->std::function<float()> {
-//			return [=]() {
-//				return std::log(func());
-//			};
-//		}
-//	}, {"sin",
-//		[](const std::function<float()>& func)->std::function<float()> {
-//			return [=]() {
-//				return sin(func());
-//			};
-//		}
-//	}, {"cos",
-//		[](const std::function<float()>& func)->std::function<float()> {
-//			return [=]() {
-//				return cos(func());
-//			};
-//		}
-//	}, {"tan",
-//		[](const std::function<float()>& func)->std::function<float()> {
-//			return [=]() {
-//				return tan(func());
-//			};
-//		}
-//	}, {"sqrt",
-//		[](const std::function<float()>& func)->std::function<float()> {
-//			return [=]() {
-//				return sqrt(func());
-//			};
-//		}
-//	} };
