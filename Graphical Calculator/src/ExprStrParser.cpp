@@ -44,7 +44,7 @@ namespace ExprStrParser { //TODO: Fix comma
 		switch (curr_token.type) {
 		case Token::Number: 
 		{
-			const double num = std::stod(curr_token.val.data());
+			const double num = std::stod(std::string(curr_token.val));
 			return [=]() {return num; };
 		}
 		case Token::Identifier:
@@ -54,7 +54,7 @@ namespace ExprStrParser { //TODO: Fix comma
 					return *x_var;
 				};
 			} else {
-				const std::string func_name = std::string(curr_token.val.data());
+				const std::string func_name = std::string(curr_token.val);
 				return [=]() {return (*other_vars)[func_name]; };
 			}
 		}
@@ -272,6 +272,7 @@ namespace ExprStrParser { //TODO: Fix comma
 
 	void Parser::Parse(std::string& str) {
 		tokenizer.Tokenize(str);
+		curr_expression.other_vars->clear();
 		if (buildTokenTree()) {
 			curr_expression.calcFunc(tree);
 		}else {
