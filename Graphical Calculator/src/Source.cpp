@@ -18,6 +18,7 @@
 #include <queue>
 
 #include "../include/Function.h"
+#include "../include/FunctionSystem.h"
 
 #include "../myGL/Shader.h"
 #include "../myGL/VAO.h"
@@ -76,22 +77,13 @@ struct Character {
 std::map<GLchar, Character> Characters;
 GLuint characterVAO, characterVBO;
 
-class FuncData {
-public:
-    Function function;
-    std::string inputData;
-    std::queue<std::future<void>> futures;
-    glm::vec3 color = glm::vec3(1.0f);
-    GLuint vbo = 0;
-    GLuint vao = 0;
-    bool show = true;
-    bool need_remap_vbo = false;
-};
+FunctionSystem MainFunctionSystem = FunctionSystem({SCR_WIDTH,SCR_HEIGHT});
+
 std::vector<FuncData*> functions;
 
-bool update_func = true;
+bool updateFunc = true;
 
-bool need_update_shaders = false;
+bool needUpdateShaders = false;
 
 //bool viewpoint_updated = false;
 
@@ -99,17 +91,17 @@ std::atomic_bool appOn = true;
 std::mutex m;
 
 namespace RenderAxisNumbersPrecision { //for calculation of precision for number on number axis
-    int xprecision = Function::numbers_float_precision;
-    int yprecision = Function::numbers_float_precision;
+    int xprecision = MainFunctionSystem.numbersFloatPrecision;
+    int yprecision = MainFunctionSystem.numbersFloatPrecision;
     auto xformatting = std::fixed;
     auto yformatting = std::fixed;
 
     void updatePrecision() {
-        xprecision = Function::numbers_float_precision;
-        yprecision = Function::numbers_float_precision;
+        xprecision = MainFunctionSystem.numbersFloatPrecision;
+        yprecision = MainFunctionSystem.numbersFloatPrecision;
         xformatting = std::fixed;
         yformatting = std::fixed;
-        const glm::vec2 f_size = Function::getSize();
+        const glm::vec2 f_size = MainFunctionSystem.size;
         if (f_size.x<2.0f) {
             xprecision += 1;
             if (f_size.x<0.4f) {
@@ -255,6 +247,8 @@ int main() {
 
     Time::Init();
 
+    Function::mainFunctionSystem = &MainFunctionSystem;
+
     Shader funcShader("resources/shaders/function_vs.glsl", "resources/shaders/function_gs.glsl", "resources/shaders/function_fs.glsl");
     Shader coordAxisShader("resources/shaders/coordAxisShader_vs.glsl", "resources/shaders/coordAxisShader_gs.glsl", "resources/shaders/coordAxisShader_fs.glsl");
     Shader coordAxisNumbersShader("resources/shaders/coordAxisNumbersShader_vs.glsl", "resources/shaders/coordAxisNumbersShader_fs.glsl");
@@ -264,8 +258,8 @@ int main() {
     glm::mat4 projection = glm::ortho(0.0f, SCR_WIDTH, 0.0f, SCR_HEIGHT); //setup projection and shader data
     coordAxisNumbersShader.use();
     coordAxisNumbersShader.setMat4("projection", projection);
-    coordAxisNumbersShader.setVec2("center", Function::xcenter, Function::ycenter);
-    coordAxisNumbersShader.setVec2("size", Function::xsize, Function::ysize);
+    coordAxisNumbersShader.setVec2("center", MainFunctionSystem.center);
+    coordAxisNumbersShader.setVec2("size", MainFunctionSystem.size);
     coordAxisNumbersShader.setVec2("updateOffset", 0.0f, 0.0f);
     textShader.use();
     textShader.setMat4("projection", projection);
@@ -298,7 +292,7 @@ int main() {
 
     coordAxisShader.use();
     coordAxisShader.setVec2("center", 0.0f, 0.0f);
-    coordAxisShader.setVec2("size", Function::xsize, Function::ysize);
+    coordAxisShader.setVec2("size", MainFunctionSystem.size);
     //coordAxisShader.setFloat("gridSize", 10.0f);
 
     glm::vec3 coordAxisCenterColor = glm::vec3(0.5f);
@@ -319,15 +313,16 @@ int main() {
     constexpr float buttonsInc = 0.15f;
 
     //add first function
-    functions.push_back(new FuncData()); //add initial blank function
-    VBO::generate(functions.back()->vbo, static_cast<GLsizeiptr>(Function::calc_points_count*sizeof(glm::vec2)), functions.back()->function.points.data(), GL_DYNAMIC_DRAW);
-    VAO::generate(functions.back()->vao);
-    VAO::bind(functions.back()->vao);
-    VAO::addAttrib(functions.back()->vao, 0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
-    //functions.back()->color = glm::vec3(1.0f);
-    functions.back()->color = glm::vec3(static_cast<float>(rand())/(RAND_MAX), static_cast<float>(rand())/(RAND_MAX), static_cast<float>(rand())/(RAND_MAX));
+    MainFunctionSystem.functions.push_back(new FuncData()); //add initial blank function
+    VBO::generate(MainFunctionSystem.functions.back()->vbo, static_cast<GLsizeiptr>(MainFunctionSystem.calcPointsCount*sizeof(glm::vec2)), MainFunctionSystem.functions.back()->function.points.data(), GL_DYNAMIC_DRAW);
+    VAO::generate(MainFunctionSystem.functions.back()->vao);
+    VAO::bind(MainFunctionSystem.functions.back()->vao);
+    VAO::addAttrib(MainFunctionSystem.functions.back()->vao, 0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
+    //MainFunctionSystem.functions.back()->color = glm::vec3(1.0f);
+    MainFunctionSystem.functions.back()->color = glm::vec3(static_cast<float>(rand())/(RAND_MAX), static_cast<float>(rand())/(RAND_MAX), static_cast<float>(rand())/(RAND_MAX));
     std::string func_clear("");
-    functions.back()->function.setFunction(func_clear);
+    MainFunctionSystem.exprStrParser.Parse(func_clear);
+    MainFunctionSystem.functions.back()->function.SetFunction(MainFunctionSystem.exprStrParser.CopyExpression());
 
     MouseDot mouseDot;
     mouseDotShader.use();
@@ -342,22 +337,22 @@ int main() {
                 if (mouseDot.funcCaptured) {
                     if (mouseDot.byDistance) {
                         for (const glm::vec2 point : mouseDot.func->points) {
-                            const glm::vec2 pointPos = { point.x,point.y - Function::ycenter };
+                            const glm::vec2 pointPos = { point.x,point.y - MainFunctionSystem.center.y };
                             if (glm::distance(mousePos, pointPos) < glm::distance(mousePos, closestPoint)) {
                                 closestPoint = pointPos;
                             }
                         }
                         mouseDot.screenPos = closestPoint;
                     }else {
-                        mouseDot.screenPos = mouseDot.func->calcPointScrPos(mousePos);
+                        mouseDot.screenPos = mouseDot.func->CalcPointScrPos(mousePos);
                     }
                 }else {
                     if (lastLeftPressed && !mouseDot.funcCaptured) { continue; }
                     std::lock_guard lg(m);
-                    for(const auto& func: functions) {
+                    for(const auto& func: MainFunctionSystem.functions) {
 	                    if(func->show) {
 		                    for(const auto& point: func->function.points) {
-                                const glm::vec2 pointPos = { point.x,point.y - Function::ycenter };
+                                const glm::vec2 pointPos = { point.x,point.y - MainFunctionSystem.center.y };
 			                    if(glm::distance(mousePos, pointPos) < glm::distance(mousePos, closestPoint)) {
                                     closestPoint = pointPos;
                                     mouseDot.func = &func->function;
@@ -395,51 +390,51 @@ int main() {
         ImGui::Begin("Menu");
         { //draw GUI with ImGUI
             if (ImGui::Button("Home")) {
-                Function::setSize(10.0f, 10.0f);
-                Function::setCenter(0.0f, 0.0f);
-                need_update_shaders = true;
-                Function::needs_update = true;
+                MainFunctionSystem.size = {10.0f, 10.0f};
+                MainFunctionSystem.center = {0.0f, 0.0f};
+                needUpdateShaders = true;
+                MainFunctionSystem.functionsNeedUpdate = true;
                 RenderAxisNumbersPrecision::updatePrecision();
             }
             ImGui::SameLine();
             if (ImGui::Button("+")) {
-                Function::multSize(1.0f-buttonsInc, 1.0f-buttonsInc);
-                need_update_shaders = true;
-                Function::needs_update = true;
+                MainFunctionSystem.size *= glm::vec2(1.0f-buttonsInc,1.0f-buttonsInc);
+                needUpdateShaders = true;
+                MainFunctionSystem.functionsNeedUpdate = true;
                 RenderAxisNumbersPrecision::updatePrecision();
             }
             ImGui::SameLine();
             if (ImGui::Button("-")) {
-                Function::multSize(1.0f+buttonsInc, 1.0f+buttonsInc);
-                need_update_shaders = true;
-                Function::needs_update = true;
+                MainFunctionSystem.size *= glm::vec2(1.0f+buttonsInc,1.0f+buttonsInc);
+                needUpdateShaders = true;
+                MainFunctionSystem.functionsNeedUpdate = true;
                 RenderAxisNumbersPrecision::updatePrecision();
             }
             if (ImGui::Button("X +")) {
-                Function::multSize(1.0f-buttonsInc, 1.0f);
-                need_update_shaders = true;
-                Function::needs_update = true;
+                MainFunctionSystem.size.x = 1.0f-buttonsInc;
+                needUpdateShaders = true;
+                MainFunctionSystem.functionsNeedUpdate = true;
                 RenderAxisNumbersPrecision::updatePrecision();
             }
             ImGui::SameLine();
             if (ImGui::Button("X -")) {
-                Function::multSize(1.0f+buttonsInc, 1.0f);
-                need_update_shaders = true;
-                Function::needs_update = true;
+                MainFunctionSystem.size.x *= 1.0f+buttonsInc;
+                needUpdateShaders = true;
+                MainFunctionSystem.functionsNeedUpdate = true;
                 RenderAxisNumbersPrecision::updatePrecision();
             }
             ImGui::SameLine();
             if (ImGui::Button("Y +")) {
-                Function::multSize(1.0f, 1.0f-buttonsInc);
-                need_update_shaders = true;
-                Function::needs_update = true;
+                MainFunctionSystem.size.y *= 1.0f-buttonsInc;
+                needUpdateShaders = true;
+                MainFunctionSystem.functionsNeedUpdate = true;
                 RenderAxisNumbersPrecision::updatePrecision();
             }
             ImGui::SameLine();
             if (ImGui::Button("Y -")) {
-                Function::multSize(1.0f, 1.0f+buttonsInc);
-                need_update_shaders = true;
-                Function::needs_update = true;
+                MainFunctionSystem.size.y *= 1.0f+buttonsInc;
+                needUpdateShaders = true;
+                MainFunctionSystem.functionsNeedUpdate = true;
                 RenderAxisNumbersPrecision::updatePrecision();
             }
             //ImGui::Text("\n"); //somehow this makes indent smaller than " "
@@ -451,96 +446,98 @@ int main() {
             }
             if (ImGui::Button("Add new function")) {
                 std::lock_guard lg(m);
-                functions.push_back(new FuncData());
-                VBO::generate(functions.back()->vbo, static_cast<GLsizeiptr>(Function::calc_points_count*sizeof(glm::vec2)), functions.back()->function.points.data(), GL_DYNAMIC_DRAW);
-                VAO::generate(functions.back()->vao);
-                VAO::bind(functions.back()->vao);
-                VAO::addAttrib(functions.back()->vao, 0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
-                functions.back()->color = glm::vec3(static_cast<float>(rand())/(RAND_MAX), static_cast<float>(rand())/(RAND_MAX), static_cast<float>(rand())/(RAND_MAX));
-                functions.back()->function.setFunction(func_clear);
+                MainFunctionSystem.functions.push_back(new FuncData());
+                VBO::generate(MainFunctionSystem.functions.back()->vbo, static_cast<GLsizeiptr>(MainFunctionSystem.calcPointsCount*sizeof(glm::vec2)), MainFunctionSystem.functions.back()->function.points.data(), GL_DYNAMIC_DRAW);
+                VAO::generate(MainFunctionSystem.functions.back()->vao);
+                VAO::bind(MainFunctionSystem.functions.back()->vao);
+                VAO::addAttrib(MainFunctionSystem.functions.back()->vao, 0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
+                MainFunctionSystem.functions.back()->color = glm::vec3(static_cast<float>(rand())/(RAND_MAX), static_cast<float>(rand())/(RAND_MAX), static_cast<float>(rand())/(RAND_MAX));
+                MainFunctionSystem.exprStrParser.Parse(func_clear);
+                MainFunctionSystem.functions.back()->function.SetFunction(MainFunctionSystem.exprStrParser.CopyExpression());
             }
             ImGui::SameLine();
             if (ImGui::Button("Remove last function")) {
-                if (!functions.empty()) {
+                if (!MainFunctionSystem.functions.empty()) {
                     std::lock_guard lg(m);
-                    VBO::deleteIt(functions.back()->vbo);
-                    VAO::deleteIt(functions.back()->vao);
-                    functions.pop_back();
+                    VBO::deleteIt(MainFunctionSystem.functions.back()->vbo);
+                    VAO::deleteIt(MainFunctionSystem.functions.back()->vao);
+                    MainFunctionSystem.functions.pop_back();
                 }
             }
             std::string blank_indent; //this is stupid, but works
-            for (std::size_t i = 0; i<functions.size(); i++) {
+            for (std::size_t i = 0; i<MainFunctionSystem.functions.size(); i++) {
                 blank_indent.push_back('\r');
                 if (ImGui::Button((blank_indent+"-").c_str())) {
-                    VBO::deleteIt(functions.at(i)->vbo);
-                    VAO::deleteIt(functions.at(i)->vao);
-                    functions.erase(functions.begin()+i);
+                    VBO::deleteIt(MainFunctionSystem.functions.at(i)->vbo);
+                    VAO::deleteIt(MainFunctionSystem.functions.at(i)->vao);
+                    MainFunctionSystem.functions.erase(MainFunctionSystem.functions.begin()+i);
                     continue;
                 }
                 ImGui::SameLine();
-                if (functions[i]->show) {
+                if (MainFunctionSystem.functions[i]->show) {
                     if (ImGui::Button((blank_indent+"hide").c_str())) {
-                        functions[i]->show = false;
+                        MainFunctionSystem.functions[i]->show = false;
                     }
                 } else {
                     if (ImGui::Button((blank_indent+"show").c_str())) {
-                        functions[i]->show = true;
+                        MainFunctionSystem.functions[i]->show = true;
                     }
                 }
                 ImGui::SameLine();
                 if (ImGui::Button((blank_indent+"Variables").c_str())) {
-                    if (!functions[i]->function.expr_str_parser.GetArgs().empty()) {
+                    if (!MainFunctionSystem.functions[i]->function.functionExpression.GetArgs().empty()) {
                         ImGui::OpenPopup((blank_indent+"Variables").c_str());
                     }
                 }
                 if (ImGui::BeginPopup((blank_indent+"Variables").c_str())) {
-                    for (auto& arg: functions[i]->function.expr_str_parser.GetArgs()) {
+                    for (auto& arg: MainFunctionSystem.functions[i]->function.functionExpression.GetArgs()) {
                         if (ImGui::InputDouble((blank_indent+arg.first).c_str(), &arg.second)) {
-                            functions[i]->function.expr_str_parser.SetArgs(arg.first,arg.second);
-                            functions[i]->function.needs_personal_update = true;
+                            MainFunctionSystem.functions[i]->function.functionExpression.SetArgs(arg.first,arg.second);
+                            MainFunctionSystem.functions[i]->function.needsPersonalUpdate = true;
                         }
                         ImGui::SameLine();
                         const float inc = abs(arg.second/10.0f);
                         if (ImGui::DragFloat2(arg.first.c_str(), (float*)&arg.second, inc==0.0f?0.001f:(inc>1000.0f?1000.0f:inc))) {
-                            functions[i]->function.expr_str_parser.SetArgs(arg.first,arg.second);
-                            functions[i]->function.needs_personal_update = true;
+                            MainFunctionSystem.functions[i]->function.functionExpression.SetArgs(arg.first,arg.second);
+                            MainFunctionSystem.functions[i]->function.needsPersonalUpdate = true;
                         }
                     }
                     ImGui::EndPopup();
                 }
                 ImGui::SameLine();
-                ImGui::ColorEdit3(blank_indent.c_str(), value_ptr(functions[i]->color), ImGuiColorEditFlags_NoInputs);
+                ImGui::ColorEdit3(blank_indent.c_str(), value_ptr(MainFunctionSystem.functions[i]->color), ImGuiColorEditFlags_NoInputs);
                 ImGui::SameLine();
-                if (ImGui::InputText(blank_indent.c_str(), &functions[i]->inputData)) {
-                    auto last_args = functions[i]->function.expr_str_parser.GetArgs();
-                    functions[i]->function.setFunction(functions[i]->inputData);
+                if (ImGui::InputText(blank_indent.c_str(), &MainFunctionSystem.functions[i]->inputData)) {
+                    auto last_args = MainFunctionSystem.functions[i]->function.functionExpression.GetArgs();
+                    MainFunctionSystem.exprStrParser.Parse(MainFunctionSystem.functions[i]->inputData);
+                    MainFunctionSystem.functions[i]->function.SetFunction(MainFunctionSystem.exprStrParser.CopyExpression());
 
-                    for (auto& arg: functions[i]->function.expr_str_parser.GetArgs()) {
-                        functions[i]->function.expr_str_parser.SetArgs(arg.first, last_args[arg.first]);
+                    for (auto& arg: MainFunctionSystem.functions[i]->function.functionExpression.GetArgs()) {
+                        MainFunctionSystem.functions[i]->function.functionExpression.SetArgs(arg.first, last_args[arg.first]);
                     }
-                    //functions[i]->futures.push_back({ std::async(std::launch::async, [&, i] {functions[i]->function.recalculatePoints(); }) });
-                    functions[i]->futures.push({ std::async(std::launch::async, [&, i] {functions[i]->function.recalculatePoints(); }) });
+                    //MainFunctionSystem.functions[i]->futures.push_back({ std::async(std::launch::async, [&, i] {MainFunctionSystem.functions[i]->function.recalculatePoints(); }) });
+                    MainFunctionSystem.functions[i]->futures.push({ std::async(std::launch::async, [&, i] {MainFunctionSystem.functions[i]->function.RecalculatePoints(); }) });
                 }
             }
         }
         ImGui::End();
 
         if (imGuiIO.WantCaptureMouse || mouseDot.funcCaptured) {
-            update_func = false;
+            updateFunc = false;
         } else {
-            update_func = true;
+            updateFunc = true;
         }
 
-        if (need_update_shaders) { //update shaders
+        if (needUpdateShaders) { //update shaders
             coordAxisShader.use();
-            coordAxisShader.setVec2("center", Function::xcenter, Function::ycenter);
-            coordAxisShader.setVec2("size", Function::xsize, Function::ysize);
+            coordAxisShader.setVec2("center", MainFunctionSystem.center);
+            coordAxisShader.setVec2("size", MainFunctionSystem.size);
         	//coordAxisNumbersShader.use();
             //coordAxisNumbersShader.setVec2("center", Function::xcenter, Function::ycenter);
             //coordAxisNumbersShader.setVec2("size", Function::xsize, Function::ysize);
             funcShader.use();
-            funcShader.setFloat("ycenter", Function::ycenter);
-            need_update_shaders = false;
+            funcShader.setFloat("ycenter", MainFunctionSystem.center.y);
+            needUpdateShaders = false;
         }
 
         glLineWidth(1);//draw coord axes
@@ -559,44 +556,44 @@ int main() {
         //    textShader.use();
         //    textShader.setMat4("projection", projection);
         //}
-        RenderAxisNumbers(coordAxisNumbersShader, Function::getCenter(), Function::getSize(), 0.25f, glm::vec3(0.7f)); //render numbers on number axis
+        RenderAxisNumbers(coordAxisNumbersShader, MainFunctionSystem.center, MainFunctionSystem.size, 0.25f, glm::vec3(0.7f)); //render numbers on number axis
 
         glLineWidth(3);
         funcShader.use();
-        for (std::size_t i = 0; i<functions.size(); i++) { //check if function recalculated and draw it
-            if (!functions[i]->show) { continue; }
-            if (Function::needs_update) {
-                //functions[i]->futures.push_back({ std::async(std::launch::async, [&, i] {functions[i]->function.recalculatePoints(); }) });
-                functions[i]->futures.push({ std::async(std::launch::async, [&, i] {functions[i]->function.recalculatePoints(); }) });
-            } else if (functions[i]->function.needs_personal_update) {
-                functions[i]->futures.push({ std::async(std::launch::async, [&, i] {functions[i]->function.recalculatePoints(); }) });
-                functions[i]->function.needs_personal_update = false;
+        for (std::size_t i = 0; i<MainFunctionSystem.functions.size(); i++) { //check if function recalculated and draw it
+            if (!MainFunctionSystem.functions[i]->show) { continue; }
+            if (MainFunctionSystem.functionsNeedUpdate) {
+                //MainFunctionSystem.functions[i]->futures.push_back({ std::async(std::launch::async, [&, i] {MainFunctionSystem.functions[i]->function.recalculatePoints(); }) });
+                MainFunctionSystem.functions[i]->futures.push({ std::async(std::launch::async, [&, i] {MainFunctionSystem.functions[i]->function.RecalculatePoints(); }) });
+            } else if (MainFunctionSystem.functions[i]->function.needsPersonalUpdate) {
+                MainFunctionSystem.functions[i]->futures.push({ std::async(std::launch::async, [&, i] {MainFunctionSystem.functions[i]->function.RecalculatePoints(); }) });
+                MainFunctionSystem.functions[i]->function.needsPersonalUpdate = false;
             }
-            while (!functions[i]->futures.empty() && functions[i]->futures.front()._Is_ready()) { //helps a bit to combat artifacts, when changing zoom(size)
-                functions[i]->futures.pop();
-                functions[i]->need_remap_vbo = true;
+            while (!MainFunctionSystem.functions[i]->futures.empty() && MainFunctionSystem.functions[i]->futures.front()._Is_ready()) { //helps a bit to combat artifacts, when changing zoom(size)
+                MainFunctionSystem.functions[i]->futures.pop();
+                MainFunctionSystem.functions[i]->needRemapVBO = true;
             }
-            //for (auto it = functions[i]->futures.begin(); it<functions[i]->futures.end();) {
+            //for (auto it = MainFunctionSystem.functions[i]->futures.begin(); it<MainFunctionSystem.functions[i]->futures.end();) {
             //    if (it->_Is_ready()) { //if future is ready, remap vbo and remove the future from vector
-            //        it = functions[i]->futures.erase(it);
-            //        functions[i]->need_remap_vbo = true;
+            //        it = MainFunctionSystem.functions[i]->futures.erase(it);
+            //        MainFunctionSystem.functions[i]->need_remap_vbo = true;
             //    } else {
             //        ++it;
             //    }
             //}
-            if (functions[i]->need_remap_vbo) {
-                VBO::bind(functions[i]->vbo);
+            if (MainFunctionSystem.functions[i]->needRemapVBO) {
+                VBO::bind(MainFunctionSystem.functions[i]->vbo);
                 void* ptr = glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
-                memcpy(ptr, functions[i]->function.points.data(), Function::calc_points_count*sizeof(glm::vec2)); //copy points data to vbo
+                memcpy(ptr, MainFunctionSystem.functions[i]->function.points.data(), MainFunctionSystem.calcPointsCount*sizeof(glm::vec2)); //copy points data to vbo
                 glUnmapBuffer(GL_ARRAY_BUFFER);
-                functions[i]->need_remap_vbo = false;
+                MainFunctionSystem.functions[i]->needRemapVBO = false;
             }
 
-            VAO::bind(functions[i]->vao);
-            funcShader.setVec3("color", functions[i]->color);
-            glDrawArrays(GL_LINE_STRIP_ADJACENCY, 0, static_cast<GLsizei>(Function::calc_points_count));
+            VAO::bind(MainFunctionSystem.functions[i]->vao);
+            funcShader.setVec3("color", MainFunctionSystem.functions[i]->color);
+            glDrawArrays(GL_LINE_STRIP_ADJACENCY, 0, static_cast<GLsizei>(MainFunctionSystem.calcPointsCount));
         }
-        Function::needs_update = false;
+        MainFunctionSystem.functionsNeedUpdate = false;
 
         if (mouseDot.funcCaptured) { //draw mouse dot and value at it
             VAO::bind(mouseDotVAO);
@@ -609,7 +606,7 @@ int main() {
             //ss << RenderAxisNumbersPrecision::yformatting << std::setprecision(RenderAxisNumbersPrecision::yprecision) << Function::ysize*(mouseDot.func->expr_str_parser.calculate(mouseDot.screenPos.y+Function::ycenter));
             //std::lock_guard lg(mouseDot.func->m);
             //const std::string dotText = std::to_string(Function::xsize*(mouseDot.screenPos.x-Function::xcenter)) + " " + std::to_string(Function::ysize*(mouseDot.func->expr_str_parser.calculate(mouseDot.screenPos.y+Function::ycenter)));
-            const std::string dotText = std::to_string(Function::xsize*(mouseDot.screenPos.x-Function::xcenter)) + " " + std::to_string(mouseDot.func->calcAtScrPos(mouseDot.screenPos));
+            const std::string dotText = std::to_string(MainFunctionSystem.size.x*(mouseDot.screenPos.x-MainFunctionSystem.center.x)) + " " + std::to_string(mouseDot.func->CalcAtScrPos(mouseDot.screenPos));
             RenderText(textShader, dotText, SCR_WIDTH*(mouseDot.screenPos.x+1.0f)*0.5f+10.0f, SCR_HEIGHT*(mouseDot.screenPos.y+1.0f)*0.5f, 0.3f, glm::vec3(0.7f));
         }
 
@@ -661,13 +658,13 @@ void mouse_cursor_callback(GLFWwindow* window, const double xpos, const double y
         mouse.firstInput = false;
     }
 
-    if (update_func) {
+    if (updateFunc) {
         if (mouse.leftPressed) {
             const float deltaX = xposIn-mouse.pos.x;
             const float deltaY = yposIn-mouse.pos.y;
-            Function::incCenter(deltaX/(SCR_WIDTH/2.0f), deltaY/(SCR_HEIGHT/2.0f));
-            need_update_shaders = true;
-            Function::needs_update = true;
+            MainFunctionSystem.center += glm::vec2(deltaX/(SCR_WIDTH/2.0f), deltaY/(SCR_HEIGHT/2.0f));
+            needUpdateShaders = true;
+            MainFunctionSystem.functionsNeedUpdate = true;
         }
     }
 
@@ -680,23 +677,23 @@ void mouse_button_callback(GLFWwindow* window, const int button, const int actio
         mouse.leftPressed = true;
     } else if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE) {
         mouse.leftPressed = false;
-        need_update_shaders = true;
-        Function::needs_update = true;
+        needUpdateShaders = true;
+        MainFunctionSystem.functionsNeedUpdate = true;
     }
 }
 
 void mouse_scroll_callback(GLFWwindow* window, const double xoffset, const double yoffset) {
     mouse.wheelScrolled = true;
-    if (update_func) {//scale functions
+    if (updateFunc) {//scale MainFunctionSystem.functions
         const glm::vec2 mousePos = glm::vec2(mouse.pos.x/SCR_WIDTH*2.0f-1.0f, mouse.pos.y/SCR_HEIGHT*2.0f-1.0f);
-        const glm::vec2 lastValue = (-Function::getCenter()+mousePos)*Function::getSize();
+        const glm::vec2 lastValue = (-MainFunctionSystem.center+mousePos)*MainFunctionSystem.size;
 	    //const glm::vec2 lastCenterValue = (Function::getCenter()+glm::vec2(mouse.pos.x/SCR_WIDTH*2-1, mouse.pos.y/SCR_HEIGHT*2-1))*Function::getSize();
         //Function::incCenter(-(mouse.pos.x/SCR_WIDTH -Function::getCenterNDC().x)*(static_cast<float>(yoffset)/10.0f),
 		//					-(mouse.pos.y/SCR_HEIGHT-Function::getCenterNDC().y)*(static_cast<float>(yoffset)/10.0f));
-        Function::multSize((1.0f-static_cast<float>(yoffset)/20.0f), (1.0f-static_cast<float>(yoffset)/20.0f));
-        Function::setCenter(-lastValue/Function::getSize()+mousePos);
-        need_update_shaders = true;
-        Function::needs_update = true;
+        MainFunctionSystem.size *= glm::vec2((1.0f-static_cast<float>(yoffset)/20.0f), (1.0f-static_cast<float>(yoffset)/20.0f));
+        MainFunctionSystem.center = -lastValue/MainFunctionSystem.size+mousePos;
+        needUpdateShaders = true;
+        MainFunctionSystem.functionsNeedUpdate = true;
         RenderAxisNumbersPrecision::updatePrecision();
     }
 }
