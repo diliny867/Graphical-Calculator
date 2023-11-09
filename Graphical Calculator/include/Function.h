@@ -2,20 +2,17 @@
 
 #include <glm/glm.hpp>
 
-#include "../myGL/VBO.h"
-
-#include <iostream>
 #include <vector>
-#include <functional>
-#include <sstream>
-#include <string>
 #include <mutex>
+
+#include "Common.h"
 #include "ExprStrParser.h"
 
 class Function {
 private:
 	std::mutex m;
-	//void recalculate_points_thread(const std::function<void(GLuint)>& callback, const GLuint vbo);
+	std::atomic_int recalculationBuffers = 0;
+	constexpr static int recalculationBuffersMax = 10;
 
 public:
 	static inline class FunctionSystem* mainFunctionSystem = nullptr;
@@ -26,13 +23,17 @@ public:
 
 	Function();
 	Function(int _screen_width, int _screen_height);
-	std::vector<glm::vec2>points;
+	//std::vector<glm::vec2>points;
+
+	PointsBuf points;
 
 	void SetFunction(ExprStrParser::Expression expression);
 	glm::vec2 CalcPointScrPos(glm::vec2 screenPos);
 	float CalcAtScrPos(glm::vec2 screenPos);
-	static glm::vec2 GetCenterNDC();
 	void RecalculatePoints(); //function that recalculates points of function
+	PointsBuf CalculatePoints(); //function that recalculates points of function
+	void SetPoints(PointsBuf buf);
+	void FreePointsBuf(PointsBuf buf);
 	~Function() = default;
 };
 

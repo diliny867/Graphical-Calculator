@@ -1,14 +1,19 @@
-#include <utility>
-
 #include "../include/Function.h"
 #include "../include/FunctionSystem.h"
+
+#include <utility>
+#include <iostream>
+#include <functional>
 
 //Function::Function(const int _screen_width, const int _screen_height):screen_width(_screen_width), screen_height(_screen_height), xsize(10.0f), ysize(10.0f), xcenter(0.0f), ycenter(0.0f), needs_update(false)
 //	{ points.resize(calc_points_count+2); }
 Function::Function(const int _screen_width, const int _screen_height) {
-	points.resize(mainFunctionSystem->calcPointsCount+2);
+	//points.resize(mainFunctionSystem->calcPointsCount+2);
+	points= {mainFunctionSystem->pointsCount, (glm::vec2*)calloc(mainFunctionSystem->pointsCount,sizeof(glm::vec2))};
 }
-Function::Function(): Function(800, 600) {}
+Function::Function(): Function(800, 600) {
+	points = {mainFunctionSystem->pointsCount, (glm::vec2*)calloc(mainFunctionSystem->pointsCount,sizeof(glm::vec2))};
+}
 
 void Function::SetFunction(ExprStrParser::Expression expression) {
 	functionExpression = std::move(expression);
@@ -23,17 +28,56 @@ float Function::CalcAtScrPos(const glm::vec2 screenPos) {
 	return functionExpression.Calculate((screenPos.x-mainFunctionSystem->center.x)*mainFunctionSystem->size.x);
 }
 
-glm::vec2 Function::GetCenterNDC() {
-	return (mainFunctionSystem->center+1.0f)/2.0f;
-}
+void Function::RecalculatePoints() {
+	const std::size_t pointsCount = mainFunctionSystem->pointsCount;
+	const glm::vec2 size = mainFunctionSystem->size;
+	const float centerx = mainFunctionSystem->center.x;
 
-void Function::RecalculatePoints() { 
-	const float indent = 1.0f/(static_cast<float>(mainFunctionSystem->calcPointsCount)/2.0f);
-	float left = -mainFunctionSystem->center.x-1.0f-indent;
+	const float indent = 1.0f/(static_cast<float>(pointsCount)*0.5);
+	float left = -centerx-1.0f-indent;
+
 	std::lock_guard lg(m);
-	for (int i = 0; i<mainFunctionSystem->calcPointsCount+2; i++) {
-		points[i] = glm::vec2((-1.0f-indent+static_cast<float>(i)*indent), static_cast<float>(functionExpression.Calculate(left * mainFunctionSystem->size.x)/mainFunctionSystem->size.y));
+
+	for(std::size_t i=0; i<pointsCount; i++) {
+		points.data[i] = glm::vec2((-1.0f-indent+static_cast<float>(i)*indent), static_cast<float>(functionExpression.Calculate(left * size.x)/size.y));
 		left += indent;
 	}
+}
 
+PointsBuf Function::CalculatePoints() {
+
+	const std::size_t pointsCount = mainFunctionSystem->pointsCount;
+	const glm::vec2 size = mainFunctionSystem->size;
+	const float centerx = mainFunctionSystem->center.x;
+
+	const float indent = 1.0f/(static_cast<float>(pointsCount)*0.5);
+	float left = -centerx-1.0f-indent;
+
+	ExprStrParser::Expression expr;
+	{
+		std::lock_guard lg(m);
+		expr = functionExpression.Copy();
+	}
+
+	while(recalculationBuffers>=recalculationBuffersMax) {
+		return {0,0}; //temporary
+	}
+	++recalculationBuffers;
+
+	PointsBuf pointsBuf = {pointsCount,(glm::vec2*)malloc(sizeof(glm::vec2)*pointsCount)};
+
+	for(std::size_t i=0; i<pointsCount; i++) {
+		pointsBuf.data[i] = glm::vec2((-1.0f-indent+static_cast<float>(i)*indent), static_cast<float>(expr.Calculate(left * size.x)/size.y));
+		left += indent;
+	}
+	return pointsBuf;
+}
+void Function::SetPoints(PointsBuf buf) {
+	std::lock_guard lg(m);
+	points.data = (glm::vec2*)realloc(points.data, sizeof(glm::vec2)*buf.size);
+	memcpy(points.data, buf.data, sizeof(glm::vec2)*buf.size);
+}
+void Function::FreePointsBuf(PointsBuf buf) {
+	free(buf.data);
+	--recalculationBuffers;
 }

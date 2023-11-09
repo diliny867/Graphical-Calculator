@@ -28,6 +28,8 @@
 #include "../myGL/Texture2D.h"
 
 #include <ft2build.h>
+#include <stack>
+
 #include FT_FREETYPE_H
 
 //callbacks and some other functions
@@ -314,7 +316,7 @@ int main() {
 
     //add first function
     MainFunctionSystem.functions.push_back(new FuncData()); //add initial blank function
-    VBO::generate(MainFunctionSystem.functions.back()->vbo, static_cast<GLsizeiptr>(MainFunctionSystem.calcPointsCount*sizeof(glm::vec2)), MainFunctionSystem.functions.back()->function.points.data(), GL_DYNAMIC_DRAW);
+    VBO::generate(MainFunctionSystem.functions.back()->vbo, static_cast<GLsizeiptr>(MainFunctionSystem.functions.back()->function.points.size*sizeof(glm::vec2)), MainFunctionSystem.functions.back()->function.points.data, GL_DYNAMIC_DRAW);
     VAO::generate(MainFunctionSystem.functions.back()->vao);
     VAO::bind(MainFunctionSystem.functions.back()->vao);
     VAO::addAttrib(MainFunctionSystem.functions.back()->vao, 0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
@@ -336,7 +338,8 @@ int main() {
                 glm::vec2 closestPoint = { 4,4 };
                 if (mouseDot.funcCaptured) {
                     if (mouseDot.byDistance) {
-                        for (const glm::vec2 point : mouseDot.func->points) {
+                        for(std::size_t i=0; i<MainFunctionSystem.pointsCount; i++) {
+                            const glm::vec2& point = mouseDot.func->points.data[i];
                             const glm::vec2 pointPos = { point.x,point.y - MainFunctionSystem.center.y };
                             if (glm::distance(mousePos, pointPos) < glm::distance(mousePos, closestPoint)) {
                                 closestPoint = pointPos;
@@ -351,7 +354,8 @@ int main() {
                     std::lock_guard lg(m);
                     for(const auto& func: MainFunctionSystem.functions) {
 	                    if(func->show) {
-		                    for(const auto& point: func->function.points) {
+                            for(std::size_t i=0; i<MainFunctionSystem.pointsCount; i++) {
+                                const glm::vec2& point = func->function.points.data[i];
                                 const glm::vec2 pointPos = { point.x,point.y - MainFunctionSystem.center.y };
 			                    if(glm::distance(mousePos, pointPos) < glm::distance(mousePos, closestPoint)) {
                                     closestPoint = pointPos;
@@ -373,6 +377,8 @@ int main() {
             }
         }
     });
+
+    //std::stack<std::future<glm::vec2*>> unneededFutures;
 
     while (!glfwWindowShouldClose(window)) {
         processInput(window);
@@ -411,7 +417,7 @@ int main() {
                 RenderAxisNumbersPrecision::updatePrecision();
             }
             if (ImGui::Button("X +")) {
-                MainFunctionSystem.size.x = 1.0f-buttonsInc;
+                MainFunctionSystem.size.x *= 1.0f-buttonsInc;
                 needUpdateShaders = true;
                 MainFunctionSystem.functionsNeedUpdate = true;
                 RenderAxisNumbersPrecision::updatePrecision();
@@ -447,7 +453,7 @@ int main() {
             if (ImGui::Button("Add new function")) {
                 std::lock_guard lg(m);
                 MainFunctionSystem.functions.push_back(new FuncData());
-                VBO::generate(MainFunctionSystem.functions.back()->vbo, static_cast<GLsizeiptr>(MainFunctionSystem.calcPointsCount*sizeof(glm::vec2)), MainFunctionSystem.functions.back()->function.points.data(), GL_DYNAMIC_DRAW);
+                VBO::generate(MainFunctionSystem.functions.back()->vbo, static_cast<GLsizeiptr>(MainFunctionSystem.functions.back()->function.points.size*sizeof(glm::vec2)), MainFunctionSystem.functions.back()->function.points.data, GL_DYNAMIC_DRAW);
                 VAO::generate(MainFunctionSystem.functions.back()->vao);
                 VAO::bind(MainFunctionSystem.functions.back()->vao);
                 VAO::addAttrib(MainFunctionSystem.functions.back()->vao, 0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
@@ -464,60 +470,58 @@ int main() {
                     MainFunctionSystem.functions.pop_back();
                 }
             }
-            std::string blank_indent; //this is stupid, but works
             for (std::size_t i = 0; i<MainFunctionSystem.functions.size(); i++) {
-                blank_indent.push_back('\r');
-                if (ImGui::Button((blank_indent+"-").c_str())) {
-                    VBO::deleteIt(MainFunctionSystem.functions.at(i)->vbo);
-                    VAO::deleteIt(MainFunctionSystem.functions.at(i)->vao);
+                ImGui::PushID((int)i);
+                FuncData* currFunction = MainFunctionSystem.functions.at(i);
+                if (ImGui::Button("-")) {
+                    VBO::deleteIt(currFunction->vbo);
+                    VAO::deleteIt(currFunction->vao);
                     MainFunctionSystem.functions.erase(MainFunctionSystem.functions.begin()+i);
                     continue;
                 }
                 ImGui::SameLine();
-                if (MainFunctionSystem.functions[i]->show) {
-                    if (ImGui::Button((blank_indent+"hide").c_str())) {
-                        MainFunctionSystem.functions[i]->show = false;
+                if (currFunction->show) {
+                    if (ImGui::Button("hide")) {
+                        currFunction->show = false;
                     }
                 } else {
-                    if (ImGui::Button((blank_indent+"show").c_str())) {
-                        MainFunctionSystem.functions[i]->show = true;
+                    if (ImGui::Button("show")) {
+                        currFunction->show = true;
                     }
                 }
                 ImGui::SameLine();
-                if (ImGui::Button((blank_indent+"Variables").c_str())) {
-                    if (!MainFunctionSystem.functions[i]->function.functionExpression.GetArgs().empty()) {
-                        ImGui::OpenPopup((blank_indent+"Variables").c_str());
+                if (ImGui::Button("Variables")) {
+                    if (currFunction->function.functionExpression.GetArgs().size()>1) { //because the size is at least one (there is always x)
+                        ImGui::OpenPopup("Variables");
                     }
                 }
-                if (ImGui::BeginPopup((blank_indent+"Variables").c_str())) {
-                    for (auto& arg: MainFunctionSystem.functions[i]->function.functionExpression.GetArgs()) {
-                        if (ImGui::InputDouble((blank_indent+arg.first).c_str(), &arg.second)) {
-                            MainFunctionSystem.functions[i]->function.functionExpression.SetArgs(arg.first,arg.second);
-                            MainFunctionSystem.functions[i]->function.needsPersonalUpdate = true;
+                if (ImGui::BeginPopup("Variables")) {
+                    for (auto& [argName, argValue]: currFunction->function.functionExpression.GetArgs()) {
+                        if(argName == "x"){ continue; }
+                        ImGui::PushID((int)i+1);
+                        if (ImGui::InputDouble(argName.c_str(), &argValue)) {
+                            currFunction->function.functionExpression.SetArgs(argName,argValue);
+                            currFunction->function.needsPersonalUpdate = true;
                         }
+                        ImGui::PopID();
                         ImGui::SameLine();
-                        const float inc = abs(arg.second/10.0f);
-                        if (ImGui::DragFloat2(arg.first.c_str(), (float*)&arg.second, inc==0.0f?0.001f:(inc>1000.0f?1000.0f:inc))) {
-                            MainFunctionSystem.functions[i]->function.functionExpression.SetArgs(arg.first,arg.second);
-                            MainFunctionSystem.functions[i]->function.needsPersonalUpdate = true;
+                        const double inc = abs(argValue/10.0);
+                        if (ImGui::DragScalar(argName.c_str(), ImGuiDataType_Double, &argValue, inc==0.0?0.001:(inc>1000.0?1000.0:inc))) {
+                            currFunction->function.functionExpression.SetArgs(argName,argValue);
+                            currFunction->function.needsPersonalUpdate = true;
                         }
                     }
                     ImGui::EndPopup();
                 }
                 ImGui::SameLine();
-                ImGui::ColorEdit3(blank_indent.c_str(), value_ptr(MainFunctionSystem.functions[i]->color), ImGuiColorEditFlags_NoInputs);
+                ImGui::ColorEdit3("", value_ptr(currFunction->color), ImGuiColorEditFlags_NoInputs);
                 ImGui::SameLine();
-                if (ImGui::InputText(blank_indent.c_str(), &MainFunctionSystem.functions[i]->inputData)) {
-                    auto last_args = MainFunctionSystem.functions[i]->function.functionExpression.GetArgs();
-                    MainFunctionSystem.exprStrParser.Parse(MainFunctionSystem.functions[i]->inputData);
-                    MainFunctionSystem.functions[i]->function.SetFunction(MainFunctionSystem.exprStrParser.CopyExpression());
-
-                    for (auto& arg: MainFunctionSystem.functions[i]->function.functionExpression.GetArgs()) {
-                        MainFunctionSystem.functions[i]->function.functionExpression.SetArgs(arg.first, last_args[arg.first]);
-                    }
-                    //MainFunctionSystem.functions[i]->futures.push_back({ std::async(std::launch::async, [&, i] {MainFunctionSystem.functions[i]->function.recalculatePoints(); }) });
-                    MainFunctionSystem.functions[i]->futures.push({ std::async(std::launch::async, [&, i] {MainFunctionSystem.functions[i]->function.RecalculatePoints(); }) });
+                if (ImGui::InputText("", &currFunction->inputData)) {
+                    MainFunctionSystem.exprStrParser.Parse(currFunction->inputData);
+                    currFunction->function.SetFunction(MainFunctionSystem.exprStrParser.CopyExpression());
+                    currFunction->futures.push_back({ std::async(std::launch::async, [&, i] {return currFunction->function.CalculatePoints(); }) });
                 }
+                ImGui::PopID();
             }
         }
         ImGui::End();
@@ -561,37 +565,56 @@ int main() {
         glLineWidth(3);
         funcShader.use();
         for (std::size_t i = 0; i<MainFunctionSystem.functions.size(); i++) { //check if function recalculated and draw it
-            if (!MainFunctionSystem.functions[i]->show) { continue; }
+            auto& currFunction = MainFunctionSystem.functions[i];
+            if (!currFunction->show) { continue; }
             if (MainFunctionSystem.functionsNeedUpdate) {
-                //MainFunctionSystem.functions[i]->futures.push_back({ std::async(std::launch::async, [&, i] {MainFunctionSystem.functions[i]->function.recalculatePoints(); }) });
-                MainFunctionSystem.functions[i]->futures.push({ std::async(std::launch::async, [&, i] {MainFunctionSystem.functions[i]->function.RecalculatePoints(); }) });
-            } else if (MainFunctionSystem.functions[i]->function.needsPersonalUpdate) {
-                MainFunctionSystem.functions[i]->futures.push({ std::async(std::launch::async, [&, i] {MainFunctionSystem.functions[i]->function.RecalculatePoints(); }) });
-                MainFunctionSystem.functions[i]->function.needsPersonalUpdate = false;
-            }
-            while (!MainFunctionSystem.functions[i]->futures.empty() && MainFunctionSystem.functions[i]->futures.front()._Is_ready()) { //helps a bit to combat artifacts, when changing zoom(size)
-                MainFunctionSystem.functions[i]->futures.pop();
-                MainFunctionSystem.functions[i]->needRemapVBO = true;
-            }
-            //for (auto it = MainFunctionSystem.functions[i]->futures.begin(); it<MainFunctionSystem.functions[i]->futures.end();) {
-            //    if (it->_Is_ready()) { //if future is ready, remap vbo and remove the future from vector
-            //        it = MainFunctionSystem.functions[i]->futures.erase(it);
-            //        MainFunctionSystem.functions[i]->need_remap_vbo = true;
-            //    } else {
-            //        ++it;
-            //    }
-            //}
-            if (MainFunctionSystem.functions[i]->needRemapVBO) {
-                VBO::bind(MainFunctionSystem.functions[i]->vbo);
-                void* ptr = glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
-                memcpy(ptr, MainFunctionSystem.functions[i]->function.points.data(), MainFunctionSystem.calcPointsCount*sizeof(glm::vec2)); //copy points data to vbo
-                glUnmapBuffer(GL_ARRAY_BUFFER);
-                MainFunctionSystem.functions[i]->needRemapVBO = false;
+                currFunction->futures.push_back({ std::async(std::launch::async, [&, i] {return currFunction->function.CalculatePoints(); }) });
+            } else if (currFunction->function.needsPersonalUpdate) {
+                currFunction->futures.push_back({ std::async(std::launch::async, [&, i] {return currFunction->function.CalculatePoints(); }) });
+                currFunction->function.needsPersonalUpdate = false;
             }
 
-            VAO::bind(MainFunctionSystem.functions[i]->vao);
-            funcShader.setVec3("color", MainFunctionSystem.functions[i]->color);
-            glDrawArrays(GL_LINE_STRIP_ADJACENCY, 0, static_cast<GLsizei>(MainFunctionSystem.calcPointsCount));
+            //printf("%llu\n",currFunction->futures.size());
+            //for(auto rit = currFunction->futures.rbegin(); rit!=currFunction->futures.rend(); ++rit) { // TODO: FIX
+            //    if(rit->_Is_ready()) {
+            //        currFunction->function.SetPoints(rit->get());
+            //        currFunction->function.FreePointsBuf(rit->get());
+            //
+            //        auto it = currFunction->futures.begin();
+            //        while(it != --rit.base()) {
+            //            unneededFutures.push(*it);
+            //            it = currFunction->futures.erase(it);
+            //        }
+            //        currFunction->futures.erase(rit.base());
+            //
+            //        currFunction->needRemapVBO = true;
+            //        break;
+            //    }
+            //}
+            //while(!unneededFutures.empty() && unneededFutures.top()._Is_ready()) {
+            //    currFunction->function.FreePointsBuf(unneededFutures.top().get());
+            //    unneededFutures.pop();
+            //}
+            if(!currFunction->futures.empty() && currFunction->futures.front()._Is_ready()) { //to dispose of buffers from unnecessary futures
+                PointsBuf points =  currFunction->futures.front().get();
+
+                currFunction->futures.pop_front();
+
+                while(!currFunction->futures.empty() && currFunction->futures.front()._Is_ready()) {
+                    currFunction->function.FreePointsBuf(points);
+                    points = currFunction->futures.front().get();
+                    currFunction->futures.pop_front();
+                }
+                currFunction->function.SetPoints(points);
+                currFunction->function.FreePointsBuf(points);
+
+                VBO::bind(currFunction->vbo);
+                VBO::setData(currFunction->vbo, currFunction->function.points.size*sizeof(glm::vec2), currFunction->function.points.data, GL_STATIC_DRAW);
+            }
+
+            VAO::bind(currFunction->vao);
+            funcShader.setVec3("color", currFunction->color);
+            glDrawArrays(GL_LINE_STRIP_ADJACENCY, 0, static_cast<GLsizei>(MainFunctionSystem.pointsCount));
         }
         MainFunctionSystem.functionsNeedUpdate = false;
 
@@ -606,8 +629,8 @@ int main() {
             //ss << RenderAxisNumbersPrecision::yformatting << std::setprecision(RenderAxisNumbersPrecision::yprecision) << Function::ysize*(mouseDot.func->expr_str_parser.calculate(mouseDot.screenPos.y+Function::ycenter));
             //std::lock_guard lg(mouseDot.func->m);
             //const std::string dotText = std::to_string(Function::xsize*(mouseDot.screenPos.x-Function::xcenter)) + " " + std::to_string(Function::ysize*(mouseDot.func->expr_str_parser.calculate(mouseDot.screenPos.y+Function::ycenter)));
-            const std::string dotText = std::to_string(MainFunctionSystem.size.x*(mouseDot.screenPos.x-MainFunctionSystem.center.x)) + " " + std::to_string(mouseDot.func->CalcAtScrPos(mouseDot.screenPos));
-            RenderText(textShader, dotText, SCR_WIDTH*(mouseDot.screenPos.x+1.0f)*0.5f+10.0f, SCR_HEIGHT*(mouseDot.screenPos.y+1.0f)*0.5f, 0.3f, glm::vec3(0.7f));
+        	const std::string dotText = std::to_string(MainFunctionSystem.size.x*(mouseDot.screenPos.x-MainFunctionSystem.center.x)) + " " + std::to_string(mouseDot.func->CalcAtScrPos(mouseDot.screenPos));
+        	RenderText(textShader, dotText, SCR_WIDTH*(mouseDot.screenPos.x+1.0f)*0.5f+10.0f, SCR_HEIGHT*(mouseDot.screenPos.y+1.0f)*0.5f, 0.3f, glm::vec3(0.7f));
         }
 
         ImGui::Render();

@@ -1,0 +1,12 @@
+#pragma once
+
+#include <glm/glm.hpp>
+
+#include <cstdlib>
+
+template<typename T> struct CArr {
+	std::size_t size;
+	T* data;
+};
+
+typedef CArr<glm::vec2> PointsBuf;

@@ -41,6 +41,7 @@
     <ClCompile Include="src\Source.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="include\Common.h" />
     <ClInclude Include="include\ExprStrParser.h" />
     <ClInclude Include="include\ExprtStrTokenizer.h" />
     <ClInclude Include="include\Function.h" />
@@ -115,11 +116,11 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>extDeps;$(IncludePath)</IncludePath>
+    <IncludePath>..\..\External Libraries;extDeps;$(IncludePath)</IncludePath>
     <LibraryPath>extDeps;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>extDeps;$(IncludePath)</IncludePath>
+    <IncludePath>..\..\External Libraries;extDeps;$(IncludePath)</IncludePath>
     <LibraryPath>extDeps;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -176,6 +177,8 @@
       <LanguageStandard>stdcpp17</LanguageStandard>
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <Optimization>MaxSpeed</Optimization>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <EnableFiberSafeOptimizations>true</EnableFiberSafeOptimizations>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
