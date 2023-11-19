@@ -676,12 +676,26 @@ void mouse_cursor_callback(GLFWwindow* window, const double xpos, const double y
 }
 
 void mouse_button_callback(GLFWwindow* window, const int button, const int action, int mods) {
-    if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
-        mouse.leftPressed = true;
-    } else if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE) {
-        mouse.leftPressed = false;
-        need_update_shaders = true;
-        Function::needs_update = true;
+    if(action == GLFW_PRESS) {
+        switch(button) {
+        case GLFW_MOUSE_BUTTON_LEFT:
+            mouse.leftPressed = true;
+            break;
+        case GLFW_MOUSE_BUTTON_RIGHT:
+            mouse.rightPressed = true;
+            break;
+        }
+    }else if (action == GLFW_RELEASE) {
+        switch(button) {
+        case GLFW_MOUSE_BUTTON_LEFT:
+            mouse.leftPressed = false;
+            need_update_shaders = true;
+            Function::needs_update = true;
+            break;
+        case GLFW_MOUSE_BUTTON_RIGHT:
+            mouse.rightPressed = false;
+            break;
+        }
     }
 }
 
