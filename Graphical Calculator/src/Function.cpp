@@ -9,10 +9,10 @@
 //	{ points.resize(calc_points_count+2); }
 Function::Function(const int _screen_width, const int _screen_height) {
 	//points.resize(mainFunctionSystem->calcPointsCount+2);
+	id = idIndex++;
 	points= {mainFunctionSystem->pointsCount, (glm::vec2*)calloc(mainFunctionSystem->pointsCount,sizeof(glm::vec2))};
 }
 Function::Function(): Function(800, 600) {
-	points = {mainFunctionSystem->pointsCount, (glm::vec2*)calloc(mainFunctionSystem->pointsCount,sizeof(glm::vec2))};
 }
 
 void Function::SetFunction(ExprStrParser::Expression expression) {
@@ -45,7 +45,7 @@ void Function::RecalculatePoints() {
 }
 
 PointsBuf Function::CalculatePoints() {
-
+	//printf("start %d\n",id);
 	const std::size_t pointsCount = mainFunctionSystem->pointsCount;
 	const glm::vec2 size = mainFunctionSystem->size;
 	const float centerx = mainFunctionSystem->center.x;
@@ -60,7 +60,7 @@ PointsBuf Function::CalculatePoints() {
 	}
 
 	while(recalculationBuffers>=recalculationBuffersMax) {
-		return {0,0}; //temporary
+		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 	}
 	++recalculationBuffers;
 
@@ -70,12 +70,14 @@ PointsBuf Function::CalculatePoints() {
 		pointsBuf.data[i] = glm::vec2((-1.0f-indent+static_cast<float>(i)*indent), static_cast<float>(expr.Calculate(left * size.x)/size.y));
 		left += indent;
 	}
+	//printf("end %d\n",id);
 	return pointsBuf;
 }
 void Function::SetPoints(PointsBuf buf) {
 	std::lock_guard lg(m);
-	points.data = (glm::vec2*)realloc(points.data, sizeof(glm::vec2)*buf.size);
-	memcpy(points.data, buf.data, sizeof(glm::vec2)*buf.size);
+	points.size = buf.size;
+	points.data = (glm::vec2*)realloc(points.data, sizeof(glm::vec2)*points.size);
+	memcpy(points.data, buf.data, sizeof(glm::vec2)*points.size);
 }
 void Function::FreePointsBuf(PointsBuf buf) {
 	free(buf.data);

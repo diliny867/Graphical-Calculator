@@ -13,7 +13,8 @@ private:
 	std::mutex m;
 	std::atomic_int recalculationBuffers = 0;
 	constexpr static int recalculationBuffersMax = 10;
-
+	inline static int idIndex = 0;
+	int id = 0;
 public:
 	static inline class FunctionSystem* mainFunctionSystem = nullptr;
 
