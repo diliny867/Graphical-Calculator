@@ -24,8 +24,8 @@ public:
 };
 class FunctionSystem {
 public:
-    std::size_t pointsCount = 4000;
-    double funcPrecision = 0.1;
+    double funcPrecision = 0.5;
+    inline static double funcPrecisionMin = 0.005;
 
 	glm::vec2 screen;
 	glm::vec2 center = {0,0};

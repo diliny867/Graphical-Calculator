@@ -5,14 +5,8 @@
 #include <iostream>
 #include <functional>
 
-//Function::Function(const int _screen_width, const int _screen_height):screen_width(_screen_width), screen_height(_screen_height), xsize(10.0f), ysize(10.0f), xcenter(0.0f), ycenter(0.0f), needs_update(false)
-//	{ points.resize(calc_points_count+2); }
-Function::Function(const int _screen_width, const int _screen_height) {
-	//points.resize(mainFunctionSystem->calcPointsCount+2);
+Function::Function() {
 	id = idIndex++;
-	points= {mainFunctionSystem->pointsCount, (glm::vec2*)calloc(mainFunctionSystem->pointsCount,sizeof(glm::vec2))};
-}
-Function::Function(): Function(800, 600) {
 }
 
 void Function::SetFunction(ExprStrParser::Expression expression) {
@@ -29,7 +23,8 @@ float Function::CalcAtScrPos(const glm::vec2 screenPos) {
 }
 
 void Function::RecalculatePoints() {
-	const std::size_t pointsCount = mainFunctionSystem->pointsCount;
+	//const std::size_t pointsCount = mainFunctionSystem->pointsCount;
+	const std::size_t pointsCount = mainFunctionSystem->screen.x/mainFunctionSystem->funcPrecision;
 	const glm::vec2 size = mainFunctionSystem->size;
 	const float centerx = mainFunctionSystem->center.x;
 
@@ -46,11 +41,15 @@ void Function::RecalculatePoints() {
 
 PointsBuf Function::CalculatePoints() {
 	//printf("start %d\n",id);
-	const std::size_t pointsCount = mainFunctionSystem->pointsCount;
+	//const std::size_t pointsCount = mainFunctionSystem->pointsCount;
+	if(mainFunctionSystem->funcPrecision < FunctionSystem::funcPrecisionMin) {
+		return {0,nullptr};
+	}
+	const std::size_t pointsCount = mainFunctionSystem->screen.x/mainFunctionSystem->funcPrecision+4; // +/- 4 to account for outside of screen points
 	const glm::vec2 size = mainFunctionSystem->size;
 	const float centerx = mainFunctionSystem->center.x;
 
-	const float indent = 1.0f/(static_cast<float>(pointsCount)*0.5);
+	const float indent = 1.0f/(static_cast<float>(pointsCount-4)*0.5);
 	float left = -centerx-1.0f-indent;
 
 	ExprStrParser::Expression expr;

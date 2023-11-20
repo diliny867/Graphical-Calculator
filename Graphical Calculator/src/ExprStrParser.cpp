@@ -303,11 +303,7 @@ namespace ExprStrParser { //TODO: Fix comma
 	Expression Expression::Copy() {
 		Expression expression(other_vars);
 		expression.tree = tree;
-		if(tree == nullptr) {
-			expression.expr = []() {return std::numeric_limits<double>::quiet_NaN(); };
-		}else {
-			expression.CalcFunc(tree);
-		}
+		expression.CalcFunc(tree);
 		return expression;
 	}
 

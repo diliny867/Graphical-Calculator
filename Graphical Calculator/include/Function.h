@@ -12,9 +12,9 @@ class Function {
 private:
 	std::mutex m;
 	std::atomic_int recalculationBuffers = 0;
-	constexpr static int recalculationBuffersMax = 10;
-	inline static int idIndex = 0;
-	int id = 0;
+	constexpr static int recalculationBuffersMax = 8;
+	inline static ull idIndex = 0;
+	ull id = 0;
 public:
 	static inline class FunctionSystem* mainFunctionSystem = nullptr;
 
@@ -23,10 +23,8 @@ public:
 	ExprStrParser::Expression functionExpression;
 
 	Function();
-	Function(int _screen_width, int _screen_height);
-	//std::vector<glm::vec2>points;
 
-	PointsBuf points;
+	PointsBuf points = {0,nullptr};
 
 	void SetFunction(ExprStrParser::Expression expression);
 	glm::vec2 CalcPointScrPos(glm::vec2 screenPos);

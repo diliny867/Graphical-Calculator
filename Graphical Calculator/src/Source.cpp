@@ -59,16 +59,6 @@ public:
 };
 Mouse mouse(SCR_WIDTH/2.0f, SCR_HEIGHT/2.0f);
 
-//mouse last positions
-//float lastX = SCR_WIDTH / 2.0f;
-//float lastY = SCR_HEIGHT / 2.0f;
-//bool firstMouse = true;
-//bool wheel_scrolled = false;
-//bool leftPressed = false;
-
-
-//constexpr float defaultMarkerSize = 0.002f;
-//float markerSize = defaultMarkerSize;
 
 struct Character {
     GLuint TextureID; // ID handle of the glyph texture
@@ -86,8 +76,6 @@ std::vector<FuncData*> functions;
 bool updateFunc = true;
 
 bool needUpdateShaders = false;
-
-//bool viewpoint_updated = false;
 
 std::atomic_bool appOn = true;
 std::mutex m;
@@ -266,16 +254,8 @@ int main() {
     textShader.use();
     textShader.setMat4("projection", projection);
 
-    //generate buffers for GPU
-    //GLuint vbo;
-    //VBO::generate(vbo, static_cast<GLsizeiptr>(Function::calc_points_count*sizeof(glm::vec2)), NULL, GL_DYNAMIC_DRAW);
-    //VBO::bind(vbo);
-    GLuint vao;
-    VAO::generate(vao);
-    VAO::bind(vao);
-    VAO::addAttrib(vao, 0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
-    //GLuint ebo;
-    //EBO::generate(ebo, sizeof(indices), indices, GL_STATIC_DRAW);
+    GLuint coordAxisVAO;
+    VAO::generate(coordAxisVAO);
 
     GLuint mouseDotVBO;
     VBO::generate(mouseDotVBO, sizeof(glm::vec2), NULL, GL_STATIC_DRAW);
@@ -347,12 +327,12 @@ int main() {
                         }
                         mouseDot.screenPos = closestPoint;
                     }else {
-                        mouseDot.screenPos = mouseDot.func->CalcPointScrPos(mousePos);
+                        mouseDot.screenPos = mouseDot.func->CalcPointScrPos(mousePos); //TODO: FIX
                     }
                 }else {
                     if (lastLeftPressed && !mouseDot.funcCaptured) { continue; }
                     std::lock_guard lg(m);
-                    for(const auto& func: MainFunctionSystem.functions) {
+                    for(FuncData* func: MainFunctionSystem.functions) {
 	                    if(func->show) {
                             float distanceToClosestPoint = glm::distance(mousePos, closestPoint);
                             for(std::size_t i=0; i<func->function.points.size; i++) {
@@ -361,18 +341,18 @@ int main() {
 			                    if(glm::distance(mousePos, pointPos) < distanceToClosestPoint) {
                                     closestPoint = pointPos;
                                     distanceToClosestPoint = glm::distance(mousePos, closestPoint);
-                                    mouseDot.func = &func->function;
 			                    }
 		                    }
                             if(distanceToClosestPoint < 0.025f) { //capture function
                                 mouseDot.screenPos = closestPoint;
+                                mouseDot.func = &func->function;
                                 mouseDot.funcCaptured = true;
                                 break;
                             }
 	                    }
                     }
-                    lastLeftPressed = true;
                 }
+                lastLeftPressed = true;
             }else {
                 lastLeftPressed = false;
                 mouseDot.funcCaptured = false;
@@ -417,6 +397,19 @@ int main() {
                 MainFunctionSystem.functionsNeedUpdate = true;
                 RenderAxisNumbersPrecision::updatePrecision();
             }
+
+            ImGui::SameLine();
+            ImGui::PushItemWidth(65);
+            const double precisionDragInc = std::clamp(abs(MainFunctionSystem.funcPrecision*0.01), FunctionSystem::funcPrecisionMin*0.1, 2.0);
+            if (ImGui::DragScalar("Precision", ImGuiDataType_Double, &MainFunctionSystem.funcPrecision, precisionDragInc)) {
+                if(MainFunctionSystem.funcPrecision < FunctionSystem::funcPrecisionMin) {
+                    MainFunctionSystem.funcPrecision = FunctionSystem::funcPrecisionMin;
+                }
+                needUpdateShaders = true;
+                MainFunctionSystem.functionsNeedUpdate = true;
+            }
+            ImGui::PopItemWidth();
+
             if (ImGui::Button("X +")) {
                 MainFunctionSystem.size.x *= 1.0f-buttonsInc;
                 needUpdateShaders = true;
@@ -444,7 +437,6 @@ int main() {
                 MainFunctionSystem.functionsNeedUpdate = true;
                 RenderAxisNumbersPrecision::updatePrecision();
             }
-            //ImGui::Text("\n"); //somehow this makes indent smaller than " "
             ImGui::Checkbox("Mouse Dot by distance", &mouseDot.byDistance);
             ImGui::SameLine();
             if(ImGui::ColorEdit3("Mouse Dot color", value_ptr(mouseDot.color), ImGuiColorEditFlags_NoInputs)) {
@@ -551,21 +543,10 @@ int main() {
         }
 
         glLineWidth(1);//draw coord axes
-        VAO::bind(vao);
+        VAO::bind(coordAxisVAO);
         coordAxisShader.use();
         glDrawArrays(GL_POINTS, 0, 1);
 
-        VAO::bind(vao);
-        coordAxisShader.use();
-        //if (viewpoint_updated) {
-        //    funcShader.use();
-        //    funcShader.setVec2("resolution", SCR_WIDTH, SCR_HEIGHT);
-        //    projection = glm::ortho(0.0f, SCR_WIDTH, 0.0f, SCR_HEIGHT);
-        //    coordAxisNumbersShader.use();
-        //    coordAxisNumbersShader.setMat4("projection", projection);
-        //    textShader.use();
-        //    textShader.setMat4("projection", projection);
-        //}
         RenderAxisNumbers(coordAxisNumbersShader, MainFunctionSystem.center, MainFunctionSystem.size, 0.25f, glm::vec3(0.7f)); //render numbers on number axis
 
         glLineWidth(3);
@@ -577,7 +558,7 @@ int main() {
                 currFunction->function.needsPersonalUpdate = false;
             }
 
-            for(auto rit = currFunction->futures.rbegin(); rit!=currFunction->futures.rend(); ++rit) { // TODO: FIX
+            for(auto rit = currFunction->futures.rbegin(); rit!=currFunction->futures.rend(); ++rit) { //to dispose of buffers from unnecessary futures
                 if(rit->_Is_ready()) {
                     const PointsBuf points = rit->get();
                     currFunction->function.SetPoints(points);
@@ -601,25 +582,6 @@ int main() {
                 }
             }
 
-            //if(!currFunction->futures.empty() && currFunction->futures.front()._Is_ready()) { //to dispose of buffers from unnecessary futures
-            //    PointsBuf points =  currFunction->futures.front().get();
-            //
-            //    currFunction->futures.pop_front();
-            //
-            //    std::lock_guard lg(m);
-            //    while(!currFunction->futures.empty() && currFunction->futures.front()._Is_ready()) {
-            //        currFunction->function.FreePointsBuf(points);
-            //        points = currFunction->futures.front().get();
-            //        currFunction->futures.pop_front();
-            //    }
-            //
-            //    currFunction->function.SetPoints(points);
-            //    currFunction->function.FreePointsBuf(points);
-            //
-            //    VBO::bind(currFunction->vbo);
-            //    VBO::setData(currFunction->vbo, currFunction->function.points.size*sizeof(glm::vec2), currFunction->function.points.data, GL_DYNAMIC_DRAW);
-            //}
-
             VAO::bind(currFunction->vao);
             funcShader.setVec3("color", currFunction->color);
             glDrawArrays(GL_LINE_STRIP_ADJACENCY, 0, static_cast<GLsizei>(currFunction->function.points.size));
@@ -628,7 +590,7 @@ int main() {
 
         if (mouseDot.funcCaptured) { //draw mouse dot and value at it
             VAO::bind(mouseDotVAO);
-            VBO::setData(mouseDotVBO, sizeof(glm::vec2), &mouseDot.screenPos, GL_DYNAMIC_DRAW);
+            VBO::setData(mouseDotVBO, sizeof(glm::vec2), glm::value_ptr(mouseDot.screenPos), GL_DYNAMIC_DRAW);
             glPointSize(7);
             mouseDotShader.use();
             glDrawArrays(GL_POINTS, 0, 1);
@@ -799,10 +761,8 @@ void RenderText(const Shader& shader, std::string text, float x, float y, const 
 
 
 void framebuffer_size_callback(GLFWwindow* window, const int width, const int height) {
-    //viewpoint_updated = true;
     SCR_WIDTH = static_cast<float>(width);
     SCR_HEIGHT = static_cast<float>(height);
-    glViewport(0, 0, width, height);
-    //0,0 - left bottom
+    glViewport(0, 0, width, height); //0,0 - left bottom
     ViewpointUpdateShaderCallback();
 }
