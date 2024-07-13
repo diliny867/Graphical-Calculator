@@ -270,7 +270,7 @@ namespace ExprStrParser { //TODO: Fix comma
 		throw std::exception("PARSE ERROR");	
 	}
 
-	void Parser::Parse(std::string& str) {
+	void Parser::Parse(const std::string& str) {
 		tokenizer.Tokenize(str);
 		curr_expression.other_vars->clear();
 		if (buildTokenTree()) {

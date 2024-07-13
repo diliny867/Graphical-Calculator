@@ -39,7 +39,7 @@ public:
 	Function(int _screen_width, int _screen_height);
 	std::vector<glm::vec2>points;
 
-	void setFunction(std::string& str);
+	void setFunction(const std::string& str);
 	glm::vec2 calcPointScrPos(glm::vec2 screenPos);
 	float calcAtScrPos(glm::vec2 screenPos);
 	static void setScreenSize(int _screen_width, int _screen_height);
@@ -54,13 +54,4 @@ public:
 	static glm::vec2 getCenterNDC();
 	void recalculatePoints(); //function that recalculates points of function
 	~Function() = default;
-};
-
-class MouseDot {
-public:
-	bool funcCaptured = false;
-	Function* func = nullptr;
-	bool byDistance = true;
-	glm::vec2 screenPos = {0,0};
-	glm::vec3 color = {1,1,1};
 };

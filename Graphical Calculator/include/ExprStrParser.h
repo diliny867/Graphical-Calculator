@@ -48,7 +48,7 @@ namespace ExprStrParser {
 		bool buildTokenTree();
 	public:
 		Parser() = default;
-		void Parse(std::string& str);
+		void Parse(const std::string& str);
 
 		Expression CopyExpression();
 

@@ -17,6 +17,7 @@ public:
 	GLuint id;
 
 	// constructor reads and builds the shader
+	Shader() {};
 	Shader(const char* vertexPath, const char* fragmentPath);
 	Shader(const char* vertexPath, const char* geometryPath, const char* fragmentPath);
 	Shader(const char* vertexPath, const char* fragmentPath, int flags);

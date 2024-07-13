@@ -7,7 +7,7 @@ Function::Function(const int _screen_width, const int _screen_height) {
 }
 Function::Function(): Function(800, 600) {}
 
-void Function::setFunction(std::string& str) {
+void Function::setFunction(const std::string& str) {
 	//std::cout<<str<<std::endl;
 	expr_str_parser.Parse(str);
 }
