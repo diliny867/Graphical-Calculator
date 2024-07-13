@@ -71,7 +71,7 @@ glm::vec2 Function::getCenterNDC() {
 
 void Function::recalculatePoints() {
 	unsigned int recalcId = currentRecalculationId.fetch_add(1);
-	if(recalcId == INT32_MAX) {
+	if(recalcId == UINT32_MAX) {
 		recalcId = currentRecalculationId.fetch_add(1);
 	}
 	const float indent = 1.0f/(static_cast<float>(calc_points_count)/2.0f);
