@@ -84,7 +84,7 @@ void App::CreateImGuiMenu() {
             }
         }
         for (std::size_t i = 0; i<functions.size(); i++) {
-            std::string id = std::to_string(i);
+            const std::string id = std::to_string(i);
             if (ImGui::Button(("-##"+id).c_str())) {
                 VBO::deleteIt(functions.at(i)->vbo);
                 VAO::deleteIt(functions.at(i)->vao);

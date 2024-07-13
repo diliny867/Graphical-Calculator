@@ -6,15 +6,20 @@
 
 #include <iostream>
 #include <vector>
+#include <array>
 #include <functional>
 #include <sstream>
 #include <string>
 #include <mutex>
 #include "ExprStrParser.h"
 
+
 class Function {
 private:
 	std::mutex m;
+	std::atomic_uint32_t currentRecalculationId = 0;
+	std::atomic_uint32_t completedRecalculationsMaxId = 0;
+
 	//void recalculate_points_thread(const std::function<void(GLuint)>& callback, const GLuint vbo);
 
 public:
@@ -37,7 +42,7 @@ public:
 
 	Function();
 	Function(int _screen_width, int _screen_height);
-	std::vector<glm::vec2>points;
+	std::array<glm::vec2, calc_points_count+2>points;
 
 	void setFunction(const std::string& str);
 	glm::vec2 calcPointScrPos(glm::vec2 screenPos);

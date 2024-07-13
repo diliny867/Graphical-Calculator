@@ -3,7 +3,8 @@
 //Function::Function(const int _screen_width, const int _screen_height):screen_width(_screen_width), screen_height(_screen_height), xsize(10.0f), ysize(10.0f), xcenter(0.0f), ycenter(0.0f), needs_update(false)
 //	{ points.resize(calc_points_count+2); }
 Function::Function(const int _screen_width, const int _screen_height) {
-	points.resize(calc_points_count+2);
+	screen_width = _screen_width;
+	screen_height = _screen_height;
 }
 Function::Function(): Function(800, 600) {}
 
@@ -68,13 +69,18 @@ glm::vec2 Function::getCenterNDC() {
 	return (glm::vec2(xcenter, ycenter)+1.0f)/2.0f;
 }
 
-void Function::recalculatePoints() { 
+void Function::recalculatePoints() {
+	unsigned int recalcId = currentRecalculationId.fetch_add(1);
+	if(recalcId == INT32_MAX) {
+		recalcId = currentRecalculationId.fetch_add(1);
+	}
 	const float indent = 1.0f/(static_cast<float>(calc_points_count)/2.0f);
 	float left = -xcenter-1.0f-indent;
 	std::lock_guard lg(m);
 	for (int i = 0; i<calc_points_count+2; i++) {
+		if(completedRecalculationsMaxId.load()>=recalcId) {return;}
 		points[i] = glm::vec2((-1.0f-indent+static_cast<float>(i)*indent), static_cast<float>(expr_str_parser.Calculate(left * xsize)/ysize));
 		left += indent;
 	}
-
+	completedRecalculationsMaxId.store(recalcId);
 }
