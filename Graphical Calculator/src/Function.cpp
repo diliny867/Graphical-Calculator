@@ -47,10 +47,13 @@ PointsBuf Function::CalculatePoints() {
 	}
 	const std::size_t pointsCount = mainFunctionSystem->screen.x/mainFunctionSystem->funcPrecision+4; // +/- 4 to account for outside of screen points
 	const glm::vec2 size = mainFunctionSystem->size;
-	const float centerx = mainFunctionSystem->center.x;
+	//const float centerx = mainFunctionSystem->center.x;
 
-	const float indent = 1.0f/(static_cast<float>(pointsCount-4)*0.5);
-	float left = -centerx-1.0f-indent;
+	//const float indent = 1.0f/(static_cast<float>(pointsCount-4)*0.5);
+	//float left = -centerx-1.0f-indent;
+
+	const float indent = mainFunctionSystem->screen.x/(static_cast<float>(pointsCount-4)*0.5);
+	float x = -mainFunctionSystem->screen.x*0.5f - indent;
 
 	ExprStrParser::Expression expr;
 	{
@@ -66,8 +69,13 @@ PointsBuf Function::CalculatePoints() {
 	PointsBuf pointsBuf = {pointsCount,(glm::vec2*)malloc(sizeof(glm::vec2)*pointsCount)};
 
 	for(std::size_t i=0; i<pointsCount; i++) {
-		pointsBuf.data[i] = glm::vec2((-1.0f-indent+static_cast<float>(i)*indent), static_cast<float>(expr.Calculate(left * size.x)/size.y));
-		left += indent;
+		//pointsBuf.data[i] = glm::vec2((-1.0f-indent+static_cast<float>(i)*indent), static_cast<float>(expr.Calculate(left * size.x)/size.y));
+
+		pointsBuf.data[i] = glm::vec2(x, static_cast<float>(expr.Calculate(x)));
+		//printf("x:%f y:%f\n", pointsBuf.data[i].x, pointsBuf.data[i].y);
+
+		//left += indent;
+		x += indent;
 	}
 	//printf("end %d\n",id);
 	return pointsBuf;

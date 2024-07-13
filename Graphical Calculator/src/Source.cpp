@@ -77,6 +77,8 @@ bool updateFunc = true;
 
 bool needUpdateShaders = false;
 
+glm::mat4 projection;
+
 std::atomic_bool appOn = true;
 std::mutex m;
 
@@ -245,7 +247,7 @@ int main() {
     Shader textShader("resources/shaders/textShader_vs.glsl", "resources/shaders/textShader_fs.glsl");
     Shader mouseDotShader("resources/shaders/mouseDot_vs.glsl","resources/shaders/mouseDot_fs.glsl");
 
-    glm::mat4 projection = glm::ortho(0.0f, SCR_WIDTH, 0.0f, SCR_HEIGHT); //setup projection and shader data
+    projection = glm::ortho(0.0f, SCR_WIDTH, 0.0f, SCR_HEIGHT); //setup projection and shader data
     coordAxisNumbersShader.use();
     coordAxisNumbersShader.setMat4("projection", projection);
     coordAxisNumbersShader.setVec2("center", MainFunctionSystem.center);
@@ -268,8 +270,9 @@ int main() {
     //constexpr float markerSize = 0.0f;
     //funcShader.setFloat("markerRadius", markerSize);
     funcShader.setVec2("resolution", SCR_WIDTH, SCR_HEIGHT);
-    funcShader.setFloat("ycenter", 0.0f);
+    funcShader.setVec2("center", 0.0f, 0.0f);
     funcShader.setVec3("color", glm::vec3(1.0f)); //desmos color: glm::vec3(199.0f, 68.0f, 64.0f)/255.0f
+    funcShader.setMat4("projection", projection);
     //glUniform2fv(glGetUniformLocation(funcShader.id, "vPoints"), static_cast<GLsizei>(function.points.size()), reinterpret_cast<float*>(function.points.data()));
 
     coordAxisShader.use();
@@ -282,14 +285,30 @@ int main() {
     coordAxisShader.setVec3("centerColor", coordAxisCenterColor);
     coordAxisShader.setVec3("gridColor", coordAxisGridColor);
 
+    mouseDotShader.use();
+    mouseDotShader.setMat4("projection", projection);
+
     ViewpointUpdateShaderCallback = [&]() { //set up callback
+        projection = glm::ortho(0.0f, SCR_WIDTH, 0.0f, SCR_HEIGHT);
+        //const glm::vec2 halfScreen = glm::vec2(SCR_WIDTH*0.5f, SCR_HEIGHT*0.5f);
+        //const glm::vec2 deltaMouse = mouse.pos - halfScreen;
+        //const glm::vec2 translation = halfScreen;
+        //zoomLevel = 1.0f;
+        //scrDimensions.left = -translation.x * zoomLevel + translation.x;
+        //scrDimensions.right = translation.x * zoomLevel + translation.x;
+        //scrDimensions.bottom = -translation.y * zoomLevel + translation.y;
+        //scrDimensions.top = translation.y * zoomLevel + translation.y;
+        //glm::mat4 projection = glm::ortho(scrDimensions.left, scrDimensions.right, scrDimensions.bottom, scrDimensions.top);
+
     	funcShader.use();
         funcShader.setVec2("resolution", SCR_WIDTH, SCR_HEIGHT);
-        projection = glm::ortho(0.0f, SCR_WIDTH, 0.0f, SCR_HEIGHT);
+        funcShader.setMat4("projection", projection);
         coordAxisNumbersShader.use();
         coordAxisNumbersShader.setMat4("projection", projection);
         textShader.use();
         textShader.setMat4("projection", projection);
+        mouseDotShader.use();
+        mouseDotShader.setMat4("projection", projection);
     };
 
     constexpr float buttonsInc = 0.15f;
@@ -333,14 +352,17 @@ int main() {
                     if (lastLeftPressed && !mouseDot.funcCaptured) { continue; }
                     std::lock_guard lg(m);
                     for(FuncData* func: MainFunctionSystem.functions) {
-	                    if(func->show) {
+	                    if(func->show && func->function.points.size>0) {
+                            float distanceTmp;
+                            closestPoint = func->function.points.data[0];
                             float distanceToClosestPoint = glm::distance(mousePos, closestPoint);
-                            for(std::size_t i=0; i<func->function.points.size; i++) {
+                            for(std::size_t i=1; i<func->function.points.size; i++) {
                                 const glm::vec2& point = func->function.points.data[i];
                                 const glm::vec2 pointPos = { point.x,point.y - MainFunctionSystem.center.y };
-			                    if(glm::distance(mousePos, pointPos) < distanceToClosestPoint) {
+                                distanceTmp = glm::distance(mousePos, pointPos);
+			                    if(distanceTmp < distanceToClosestPoint) {
                                     closestPoint = pointPos;
-                                    distanceToClosestPoint = glm::distance(mousePos, closestPoint);
+                                    distanceToClosestPoint = distanceTmp;
 			                    }
 		                    }
                             if(distanceToClosestPoint < 0.025f) { //capture function
@@ -401,10 +423,7 @@ int main() {
             ImGui::SameLine();
             ImGui::PushItemWidth(65);
             const double precisionDragInc = std::clamp(abs(MainFunctionSystem.funcPrecision*0.01), FunctionSystem::funcPrecisionMin*0.1, 2.0);
-            if (ImGui::DragScalar("Precision", ImGuiDataType_Double, &MainFunctionSystem.funcPrecision, precisionDragInc)) {
-                if(MainFunctionSystem.funcPrecision < FunctionSystem::funcPrecisionMin) {
-                    MainFunctionSystem.funcPrecision = FunctionSystem::funcPrecisionMin;
-                }
+            if (ImGui::DragScalar("Precision", ImGuiDataType_Double, &MainFunctionSystem.funcPrecision, precisionDragInc, &FunctionSystem::funcPrecisionMin)) {
                 needUpdateShaders = true;
                 MainFunctionSystem.functionsNeedUpdate = true;
             }
@@ -538,7 +557,7 @@ int main() {
             //coordAxisNumbersShader.setVec2("center", Function::xcenter, Function::ycenter);
             //coordAxisNumbersShader.setVec2("size", Function::xsize, Function::ysize);
             funcShader.use();
-            funcShader.setFloat("ycenter", MainFunctionSystem.center.y);
+            funcShader.setVec2("center", MainFunctionSystem.center);
             needUpdateShaders = false;
         }
 
@@ -705,11 +724,13 @@ void RenderAxisNumbers(const Shader& shader, const glm::vec2 center, const glm::
         ss.str("");
         //shader.setVec2("updateOffset", 1.0f, 0.0f);
         ss << RenderAxisNumbersPrecision::xformatting << std::setprecision(RenderAxisNumbersPrecision::xprecision) << interval.x*(static_cast<float>(i)-center.x*10.0f);
-        RenderText(shader, ss.str(), static_cast<float>(i+10)/10.0f*SCR_WIDTH/2.0f, (1.0f-(center.y+1.0f)/2.0f)*SCR_HEIGHT, scale, color);
+        //RenderText(shader, ss.str(), static_cast<float>(i+10)/10.0f*SCR_WIDTH/2.0f, (1.0f-(center.y+1.0f)/2.0f)*SCR_HEIGHT, scale, color);
+        RenderText(shader, ss.str(), static_cast<float>(i+10)*0.1f*SCR_WIDTH*0.5f, (1.0f-(center.y+1.0f)*0.5f)*SCR_HEIGHT, scale, color);
         ss.str("");
         //shader.setVec2("updateOffset", 0.0f, -1.0f);
         ss << RenderAxisNumbersPrecision::yformatting << std::setprecision(RenderAxisNumbersPrecision::yprecision) << interval.y*(static_cast<float>(i)+center.y*10.0f);
-        RenderText(shader, ss.str(), ((center.x+1.0f)/2.0f)*SCR_WIDTH, static_cast<float>(i+10)/10.0f*SCR_HEIGHT/2.0f, scale, color);
+        //RenderText(shader, ss.str(), ((center.x+1.0f)/2.0f)*SCR_WIDTH, static_cast<float>(i+10)/10.0f*SCR_HEIGHT/2.0f, scale, color);
+        RenderText(shader, ss.str(), ((center.x+1.0f)*0.5f)*SCR_WIDTH, static_cast<float>(i+10)*0.1f*SCR_HEIGHT*0.5f, scale, color);
     }
 }
 
