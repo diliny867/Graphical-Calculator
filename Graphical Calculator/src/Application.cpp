@@ -83,10 +83,9 @@ void App::CreateImGuiMenu() {
                 functions.pop_back();
             }
         }
-        std::string blank_indent; //this is stupid, but works
         for (std::size_t i = 0; i<functions.size(); i++) {
-            blank_indent.push_back('\r');
-            if (ImGui::Button((blank_indent+"-").c_str())) {
+            std::string id = std::to_string(i);
+            if (ImGui::Button(("-##"+id).c_str())) {
                 VBO::deleteIt(functions.at(i)->vbo);
                 VAO::deleteIt(functions.at(i)->vao);
                 functions.erase(functions.begin()+i);
@@ -94,29 +93,29 @@ void App::CreateImGuiMenu() {
             }
             ImGui::SameLine();
             if (functions[i]->show) {
-                if (ImGui::Button((blank_indent+"hide").c_str())) {
+                if (ImGui::Button(("hide##"+id).c_str())) {
                     functions[i]->show = false;
                 }
             } else {
-                if (ImGui::Button((blank_indent+"show").c_str())) {
+                if (ImGui::Button(("show##"+id).c_str())) {
                     functions[i]->show = true;
                 }
             }
             ImGui::SameLine();
-            if (ImGui::Button((blank_indent+"Variables").c_str())) {
+            if (ImGui::Button(("Variables##"+id).c_str())) {
                 if (!functions[i]->function.expr_str_parser.GetArgs().empty()) {
-                    ImGui::OpenPopup((blank_indent+"Variables").c_str());
+                    ImGui::OpenPopup(("Variables##"+id).c_str());
                 }
             }
-            if (ImGui::BeginPopup((blank_indent+"Variables").c_str())) {
+            if (ImGui::BeginPopup(("Variables##"+id).c_str())) {
                 for (auto& arg: functions[i]->function.expr_str_parser.GetArgs()) {
-                    if (ImGui::InputDouble((blank_indent+arg.first).c_str(), &arg.second)) {
+                    if (ImGui::InputDouble((arg.first+"##Input").c_str(), &arg.second)) {
                         functions[i]->function.expr_str_parser.SetArgs(arg.first,arg.second);
                         functions[i]->function.needs_personal_update = true;
                     }
                     ImGui::SameLine();
                     const float inc = abs(arg.second/10.0f);
-                    if (ImGui::DragScalar(arg.first.c_str(), ImGuiDataType_Double, &arg.second, inc==0.0f?0.001f:(inc>1000.0f?1000.0f:inc))) {
+                    if (ImGui::DragScalar((arg.first+"##Drag").c_str(), ImGuiDataType_Double, &arg.second, inc==0.0f?0.001f:(inc>1000.0f?1000.0f:inc))) {
                         functions[i]->function.expr_str_parser.SetArgs(arg.first,arg.second);
                         functions[i]->function.needs_personal_update = true;
                     }
@@ -124,9 +123,9 @@ void App::CreateImGuiMenu() {
                 ImGui::EndPopup();
             }
             ImGui::SameLine();
-            ImGui::ColorEdit3(blank_indent.c_str(), value_ptr(functions[i]->color), ImGuiColorEditFlags_NoInputs);
+            ImGui::ColorEdit3(("##"+id).c_str(), value_ptr(functions[i]->color), ImGuiColorEditFlags_NoInputs);
             ImGui::SameLine();
-            if (ImGui::InputText(blank_indent.c_str(), &functions[i]->inputData)) {
+            if (ImGui::InputText(("##"+id).c_str(), &functions[i]->inputData)) {
                 auto last_args = functions[i]->function.expr_str_parser.GetArgs();
                 functions[i]->function.setFunction(functions[i]->inputData);
 
