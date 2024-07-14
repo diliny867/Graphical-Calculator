@@ -69,7 +69,7 @@ void App::Callbacks::mouseScrollCallback(GLFWwindow* window, const double xoffse
         Function::setCenter(-lastValue/Function::getSize()+mousePos);
         app->needUpdateShaders = true;
         Function::allDirty = true;
-        RenderAxisNumbersPrecision::updatePrecision();
+        RenderAxisNumbersPrecision::UpdatePrecision();
     }
 }
 

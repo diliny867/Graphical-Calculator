@@ -2,6 +2,57 @@
 
 using namespace Application;
 
+void App::pushNewFunction() {
+    functions.push_back(new FuncData());
+    VBO::generate(functions.back()->vbo, static_cast<GLsizeiptr>(Function::calcPointsCount*sizeof(glm::vec2)), functions.back()->function.points.data(), GL_DYNAMIC_DRAW);
+    VAO::generate(functions.back()->vao);
+    VAO::bind(functions.back()->vao);
+    VAO::addAttrib(functions.back()->vao, 0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
+    functions.back()->color = glm::vec3(static_cast<float>(rand())/(RAND_MAX), static_cast<float>(rand())/(RAND_MAX), static_cast<float>(rand())/(RAND_MAX));
+    functions.back()->function.setFunction("");
+}
+
+void App::drawFunctions() {
+    glLineWidth(3);
+    shaders.funcShader.use();
+    for (std::size_t i = 0; i<functions.size(); i++) { //check if function recalculated and draw it
+        auto& function = functions[i];
+        if (!function->show) { continue; }
+        if (Function::allDirty || function->function.dirty) {
+            function->futures.push({ std::async(std::launch::async, [&, i] {function->function.recalculatePoints(); }) });
+            function->function.dirty = false;
+        }
+        //if future is ready, remap vbo and remove the future from vector
+        while (!function->futures.empty() && function->futures.front()._Is_ready()) { //with while it is a bit better at combattin artifacts, when changing zoom(size)
+            function->futures.pop();
+            function->needRemapVBO = true;
+        }
+        if (function->needRemapVBO) {
+            VBO::bind(function->vbo);
+            void* ptr = glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
+            memcpy(ptr, function->function.points.data(), Function::calcPointsCount*sizeof(glm::vec2)); //copy points data to vbo
+            glUnmapBuffer(GL_ARRAY_BUFFER);
+            function->needRemapVBO = false;
+        }
+
+        VAO::bind(function->vao);
+        shaders.funcShader.setVec3("color", function->color);
+        glDrawArrays(GL_LINE_STRIP_ADJACENCY, 0, static_cast<GLsizei>(Function::calcPointsCount));
+    }
+    Function::allDirty = false;
+}
+void App::drawMouseDot() {
+    if (mouseDot.funcCaptured) { //draw mouse dot and value at it
+        VAO::bind(mainGlObjects.mouseDotVAO);
+        VBO::setData(mainGlObjects.mouseDotVBO, sizeof(glm::vec2), &mouseDot.screenPos, GL_STATIC_DRAW);
+        glPointSize(7);
+        shaders.mouseDotShader.use();
+        glDrawArrays(GL_POINTS, 0, 1);
+        const std::string dotText = std::to_string(Function::xsize*(mouseDot.screenPos.x-Function::xcenter)) + " " + std::to_string(mouseDot.func->calcAtScrPos(mouseDot.screenPos));
+        TextRender::RenderText(shaders.textShader, dotText, screenSize.x*(mouseDot.screenPos.x+1.0f)*0.5f+10.0f, screenSize.y*(mouseDot.screenPos.y+1.0f)*0.5f, 0.3f, glm::vec3(0.7f));
+    }
+}
+
 void App::createImGuiMenu() {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
@@ -14,48 +65,48 @@ void App::createImGuiMenu() {
             Function::setCenter(0.0f, 0.0f);
             needUpdateShaders = true;
             Function::allDirty = true;
-            RenderAxisNumbersPrecision::updatePrecision();
+            RenderAxisNumbersPrecision::UpdatePrecision();
         }
         ImGui::SameLine();
         if (ImGui::Button("+")) {
             Function::multSize(1.0f-imGuiData.buttonsInc, 1.0f-imGuiData.buttonsInc);
             needUpdateShaders = true;
             Function::allDirty = true;
-            RenderAxisNumbersPrecision::updatePrecision();
+            RenderAxisNumbersPrecision::UpdatePrecision();
         }
         ImGui::SameLine();
         if (ImGui::Button("-")) {
             Function::multSize(1.0f+imGuiData.buttonsInc, 1.0f+imGuiData.buttonsInc);
             needUpdateShaders = true;
             Function::allDirty = true;
-            RenderAxisNumbersPrecision::updatePrecision();
+            RenderAxisNumbersPrecision::UpdatePrecision();
         }
         if (ImGui::Button("X +")) {
             Function::multSize(1.0f-imGuiData.buttonsInc, 1.0f);
             needUpdateShaders = true;
             Function::allDirty = true;
-            RenderAxisNumbersPrecision::updatePrecision();
+            RenderAxisNumbersPrecision::UpdatePrecision();
         }
         ImGui::SameLine();
         if (ImGui::Button("X -")) {
             Function::multSize(1.0f+imGuiData.buttonsInc, 1.0f);
             needUpdateShaders = true;
             Function::allDirty = true;
-            RenderAxisNumbersPrecision::updatePrecision();
+            RenderAxisNumbersPrecision::UpdatePrecision();
         }
         ImGui::SameLine();
         if (ImGui::Button("Y +")) {
             Function::multSize(1.0f, 1.0f-imGuiData.buttonsInc);
             needUpdateShaders = true;
             Function::allDirty = true;
-            RenderAxisNumbersPrecision::updatePrecision();
+            RenderAxisNumbersPrecision::UpdatePrecision();
         }
         ImGui::SameLine();
         if (ImGui::Button("Y -")) {
             Function::multSize(1.0f, 1.0f+imGuiData.buttonsInc);
             needUpdateShaders = true;
             Function::allDirty = true;
-            RenderAxisNumbersPrecision::updatePrecision();
+            RenderAxisNumbersPrecision::UpdatePrecision();
         }
         //ImGui::Text("\n"); //somehow this makes indent smaller than " "
         ImGui::Checkbox("Mouse Dot by distance", &mouseDot.byDistance);
@@ -66,13 +117,7 @@ void App::createImGuiMenu() {
         }
         if (ImGui::Button("Add new function")) {
             std::lock_guard lg(m);
-            functions.push_back(new FuncData());
-            VBO::generate(functions.back()->vbo, static_cast<GLsizeiptr>(Function::calcPointsCount*sizeof(glm::vec2)), functions.back()->function.points.data(), GL_DYNAMIC_DRAW);
-            VAO::generate(functions.back()->vao);
-            VAO::bind(functions.back()->vao);
-            VAO::addAttrib(functions.back()->vao, 0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
-            functions.back()->color = glm::vec3(static_cast<float>(rand())/(RAND_MAX), static_cast<float>(rand())/(RAND_MAX), static_cast<float>(rand())/(RAND_MAX));
-            functions.back()->function.setFunction("");
+            pushNewFunction();
         }
         ImGui::SameLine();
         if (ImGui::Button("Remove last function")) {
@@ -191,7 +236,7 @@ void App::createMouseDot() {
     });
 }
 
-int App::glInit() {
+int App::initGL() {
     // glfw: initialize and configure
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);//opengl versions
@@ -232,27 +277,7 @@ int App::glInit() {
     return 0;
 }
 
-int App::init() {
-    srand(static_cast<unsigned int>(time(NULL)));
-    Time::Init();
-
-    int error;
-    error = glInit();
-    if(error != 0) {
-        return error;
-    }
-    error = TextRender::Init();
-    if(error != 0) {
-        return error;
-    }
-
-    IMGUI_CHECKVERSION(); //init imgui
-    ImGui::CreateContext();
-    imGuiIO = &ImGui::GetIO();
-    ImGui::StyleColorsDark();
-    ImGui_ImplOpenGL3_Init("#version 330");
-    ImGui_ImplGlfw_InitForOpenGL(appWindow, true);
-
+void App::initShaders() {
     shaders.funcShader = Shader("resources/shaders/function_vs.glsl", "resources/shaders/function_gs.glsl", "resources/shaders/function_fs.glsl");
     shaders.coordAxisShader = Shader("resources/shaders/coordAxisShader_vs.glsl", "resources/shaders/coordAxisShader_gs.glsl", "resources/shaders/coordAxisShader_fs.glsl");
     shaders.coordAxisNumbersShader = Shader("resources/shaders/coordAxisNumbersShader_vs.glsl", "resources/shaders/coordAxisNumbersShader_fs.glsl");
@@ -267,21 +292,6 @@ int App::init() {
     shaders.coordAxisNumbersShader.setVec2("updateOffset", 0.0f, 0.0f);
     shaders.textShader.use();
     shaders.textShader.setMat4("projection", projection);
-
-    //generate buffers for GPU
-    //GLuint vbo;
-    //VBO::generate(vbo, static_cast<GLsizeiptr>(Function::calc_points_count*sizeof(glm::vec2)), NULL, GL_DYNAMIC_DRAW);
-    //VBO::bind(vbo);
-    VAO::generate(mainGlObjects.coordAxisVAO);
-    VAO::bind(mainGlObjects.coordAxisVAO);
-    VAO::addAttrib(mainGlObjects.coordAxisVAO, 0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
-    //GLuint ebo;
-    //EBO::generate(ebo, sizeof(indices), indices, GL_STATIC_DRAW);
-
-    VBO::generate(mainGlObjects.mouseDotVBO, sizeof(glm::vec2), NULL, GL_STATIC_DRAW);
-    VAO::generate(mainGlObjects.mouseDotVAO);
-    VAO::bind(mainGlObjects.mouseDotVAO);
-    VAO::addAttrib(mainGlObjects.mouseDotVAO, 0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
 
     shaders.funcShader.use();
     //constexpr float markerSize = 0.0f;
@@ -310,16 +320,48 @@ int App::init() {
         shaders.textShader.use();
         shaders.textShader.setMat4("projection", projection);
     };
+}
+
+int App::init() {
+    srand(static_cast<unsigned int>(time(NULL)));
+    Time::Init();
+
+    int error;
+    error = initGL();
+    if(error != 0) {
+        return error;
+    }
+    error = TextRender::Init();
+    if(error != 0) {
+        return error;
+    }
+
+    IMGUI_CHECKVERSION(); //init imgui
+    ImGui::CreateContext();
+    imGuiIO = &ImGui::GetIO();
+    ImGui::StyleColorsDark();
+    ImGui_ImplOpenGL3_Init("#version 330");
+    ImGui_ImplGlfw_InitForOpenGL(appWindow, true);
+
+    initShaders();
+
+    //generate buffers for GPU
+    //GLuint vbo;
+    //VBO::generate(vbo, static_cast<GLsizeiptr>(Function::calc_points_count*sizeof(glm::vec2)), NULL, GL_DYNAMIC_DRAW);
+    //VBO::bind(vbo);
+    VAO::generate(mainGlObjects.coordAxisVAO);
+    VAO::bind(mainGlObjects.coordAxisVAO);
+    VAO::addAttrib(mainGlObjects.coordAxisVAO, 0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
+    //GLuint ebo;
+    //EBO::generate(ebo, sizeof(indices), indices, GL_STATIC_DRAW);
+
+    VBO::generate(mainGlObjects.mouseDotVBO, sizeof(glm::vec2), NULL, GL_STATIC_DRAW);
+    VAO::generate(mainGlObjects.mouseDotVAO);
+    VAO::bind(mainGlObjects.mouseDotVAO);
+    VAO::addAttrib(mainGlObjects.mouseDotVAO, 0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
 
     //add first function
-    functions.push_back(new FuncData()); //add initial blank function
-    VBO::generate(functions.back()->vbo, static_cast<GLsizeiptr>(Function::calcPointsCount*sizeof(glm::vec2)), functions.back()->function.points.data(), GL_DYNAMIC_DRAW);
-    VAO::generate(functions.back()->vao);
-    VAO::bind(functions.back()->vao);
-    VAO::addAttrib(functions.back()->vao, 0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
-    //functions.back()->color = glm::vec3(1.0f);
-    functions.back()->color = glm::vec3(static_cast<float>(rand())/(RAND_MAX), static_cast<float>(rand())/(RAND_MAX), static_cast<float>(rand())/(RAND_MAX));
-    functions.back()->function.setFunction("");
+    pushNewFunction();
 
     createMouseDot();
 
@@ -394,44 +436,9 @@ int App::Run() {
         //}
         renderAxisNumbers(shaders.coordAxisNumbersShader, Function::getCenter(), Function::getSize(), 0.25f, glm::vec3(0.7f)); //render numbers on number axis
 
-        glLineWidth(3);
-        shaders.funcShader.use();
-        for (std::size_t i = 0; i<functions.size(); i++) { //check if function recalculated and draw it
-            auto& function = functions[i];
-            if (!function->show) { continue; }
-            if (Function::allDirty || function->function.dirty) {
-                //functions[i]->futures.push_back({ std::async(std::launch::async, [&, i] {functions[i]->function.recalculatePoints(); }) });
-                function->futures.push({ std::async(std::launch::async, [&, i] {function->function.recalculatePoints(); }) });
-                function->function.dirty = false;
-            }
-            //if future is ready, remap vbo and remove the future from vector
-            while (!function->futures.empty() && function->futures.front()._Is_ready()) { //with while it is a bit better at combattin artifacts, when changing zoom(size)
-                function->futures.pop();
-                function->needRemapVBO = true;
-            }
-            if (function->needRemapVBO) {
-                VBO::bind(function->vbo);
-                void* ptr = glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
-                memcpy(ptr, function->function.points.data(), Function::calcPointsCount*sizeof(glm::vec2)); //copy points data to vbo
-                glUnmapBuffer(GL_ARRAY_BUFFER);
-                function->needRemapVBO = false;
-            }
+        drawFunctions();
 
-            VAO::bind(function->vao);
-            shaders.funcShader.setVec3("color", function->color);
-            glDrawArrays(GL_LINE_STRIP_ADJACENCY, 0, static_cast<GLsizei>(Function::calcPointsCount));
-        }
-        Function::allDirty = false;
-
-        if (mouseDot.funcCaptured) { //draw mouse dot and value at it
-            VAO::bind(mainGlObjects.mouseDotVAO);
-            VBO::setData(mainGlObjects.mouseDotVBO, sizeof(glm::vec2), &mouseDot.screenPos, GL_STATIC_DRAW);
-            glPointSize(7);
-            shaders.mouseDotShader.use();
-            glDrawArrays(GL_POINTS, 0, 1);
-        	const std::string dotText = std::to_string(Function::xsize*(mouseDot.screenPos.x-Function::xcenter)) + " " + std::to_string(mouseDot.func->calcAtScrPos(mouseDot.screenPos));
-            TextRender::RenderText(shaders.textShader, dotText, screenSize.x*(mouseDot.screenPos.x+1.0f)*0.5f+10.0f, screenSize.y*(mouseDot.screenPos.y+1.0f)*0.5f, 0.3f, glm::vec3(0.7f));
-        }
+        drawMouseDot();
 
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
@@ -478,9 +485,9 @@ void App::renderAxisNumbers(const Shader& shader, const glm::vec2 center, const 
     }
 }
 
-void Application::RenderAxisNumbersPrecision::updatePrecision() {
-    xprecision = Function::numbers_float_precision;
-    yprecision = Function::numbers_float_precision;
+void Application::RenderAxisNumbersPrecision::UpdatePrecision() {
+    xprecision = Function::numbersFloatPrecision;
+    yprecision = Function::numbersFloatPrecision;
     xformatting = std::fixed;
     yformatting = std::fixed;
     const glm::vec2 f_size = Function::getSize();

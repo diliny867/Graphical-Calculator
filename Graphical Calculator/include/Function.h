@@ -23,7 +23,7 @@ private:
 	//void recalculate_points_thread(const std::function<void(GLuint)>& callback, const GLuint vbo);
 
 public:
-	inline static int numbers_float_precision = 1;
+	inline static int numbersFloatPrecision = 1;
 
 	inline static int screenWidth = 800;
 	inline static int screenHeight = 600;

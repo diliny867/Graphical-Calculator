@@ -95,10 +95,16 @@ namespace Application {
 
         void renderAxisNumbers(const Shader& shader, glm::vec2 center, glm::vec2 size, float scale, glm::vec3 color);
 
+        void pushNewFunction();
+
+        void drawFunctions();
+        void drawMouseDot();
+
         void createImGuiMenu();
         void createMouseDot();
 
-        int glInit();
+        int initGL();
+        void initShaders();
         int init();
 
         inline static App* instance = nullptr;
@@ -119,11 +125,11 @@ namespace Application {
     };
 
     namespace RenderAxisNumbersPrecision { //for calculation of precision for number on number axis
-        inline int xprecision = Function::numbers_float_precision;
-        inline int yprecision = Function::numbers_float_precision;
+        inline int xprecision = Function::numbersFloatPrecision;
+        inline int yprecision = Function::numbersFloatPrecision;
         inline auto xformatting = std::fixed;
         inline auto yformatting = std::fixed;
 
-        extern void updatePrecision();
+        extern void UpdatePrecision();
     }
 }
