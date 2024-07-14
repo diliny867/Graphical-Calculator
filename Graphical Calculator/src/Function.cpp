@@ -3,8 +3,8 @@
 //Function::Function(const int _screen_width, const int _screen_height):screen_width(_screen_width), screen_height(_screen_height), xsize(10.0f), ysize(10.0f), xcenter(0.0f), ycenter(0.0f), needs_update(false)
 //	{ points.resize(calc_points_count+2); }
 Function::Function(const int _screen_width, const int _screen_height) {
-	screen_width = _screen_width;
-	screen_height = _screen_height;
+	screenWidth = _screen_width;
+	screenHeight = _screen_height;
 }
 Function::Function(): Function(800, 600) {}
 
@@ -23,43 +23,43 @@ float Function::calcAtScrPos(const glm::vec2 screenPos) {
 }
 
 
-void Function::setScreenSize(const int _screen_width, const int _screen_height) {
-	screen_width = _screen_width;
-	screen_height = _screen_height;
+void Function::setScreenSize(const int width, const int height) {
+	screenWidth = width;
+	screenHeight = height;
 }
 
-void Function::setSize(const float _xsize, const float _ysize) {
-	xsize = _xsize;
-	ysize = _ysize;
+void Function::setSize(const float x, const float y) {
+	xsize = x;
+	ysize = y;
 	//needs_update = true;
 }
-void Function::multSize(const float delta_xsize, const float delta_ysize) {
-	xsize *= delta_xsize;
-	ysize *= delta_ysize;
+void Function::multSize(const float deltaX, const float deltaY) {
+	xsize *= deltaX;
+	ysize *= deltaY;
 	//needs_update = true;
 }
 glm::vec2 Function::getSize() {
 	return { xsize, ysize };
 }
 
-void Function::setCenter(const float _xcenter, const float _ycenter) {
-	xcenter = _xcenter;
-	ycenter = _ycenter;
+void Function::setCenter(const float x, const float y) {
+	xcenter = x;
+	ycenter = y;
 	//needs_update = true;
 }
-void Function::setCenter(const glm::vec2 _center) {
-	xcenter = _center.x;
-	ycenter = _center.y;
+void Function::setCenter(const glm::vec2 center) {
+	xcenter = center.x;
+	ycenter = center.y;
 	//needs_update = true;
 }
-void Function::incCenter(const float delta_xcenter, const float delta_ycenter) {
-	xcenter += delta_xcenter;
-	ycenter += delta_ycenter;
+void Function::incCenter(const float deltaX, const float deltaY) {
+	xcenter += deltaX;
+	ycenter += deltaY;
 	//needs_update = true;
 }
-void Function::multCenter(const float delta_xcenter, const float delta_ycenter) {
-	xcenter *= delta_xcenter;
-	ycenter *= delta_ycenter;
+void Function::multCenter(const float deltaX, const float deltaY) {
+	xcenter *= deltaX;
+	ycenter *= deltaY;
 	//needs_update = true;
 }
 glm::vec2 Function::getCenter() {

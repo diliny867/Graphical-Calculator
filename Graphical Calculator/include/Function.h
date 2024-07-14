@@ -25,8 +25,8 @@ private:
 public:
 	inline static int numbers_float_precision = 1;
 
-	inline static int screen_width = 800;
-	inline static int screen_height = 600;
+	inline static int screenWidth = 800;
+	inline static int screenHeight = 600;
 	inline static float xsize = 10.0f; //scale
 	inline static float ysize = 10.0f;
 	inline static float xcenter = 0.0f; //functions center position
@@ -46,14 +46,14 @@ public:
 	void setFunction(const std::string& str);
 	glm::vec2 calcPointScrPos(glm::vec2 screenPos);
 	float calcAtScrPos(glm::vec2 screenPos);
-	static void setScreenSize(int _screen_width, int _screen_height);
-	static void setSize(float _xsize, float _ysize);
-	static void multSize(const float delta_xsize, const float delta_ysize);
+	static void setScreenSize(int width, int height);
+	static void setSize(float x, float y);
+	static void multSize(const float deltaX, const float deltaY);
 	static glm::vec2 getSize();
-	static void setCenter(float _xcenter, float _ycenter);
-	static void setCenter(glm::vec2 _center);
-	static void incCenter(const float delta_xcenter, const float delta_ycenter);
-	static void multCenter(const float delta_xcenter, const float delta_ycenter);
+	static void setCenter(float x, float y);
+	static void setCenter(glm::vec2 center);
+	static void incCenter(const float deltaX, const float deltaY);
+	static void multCenter(const float deltaX, const float deltaY);
 	static glm::vec2 getCenter();
 	static glm::vec2 getCenterNDC();
 	void recalculatePoints(); //function that recalculates points of function
