@@ -67,9 +67,7 @@ void App::Callbacks::mouseScrollCallback(GLFWwindow* window, const double xoffse
         //					-(mouse.pos.y/screenSize.y-Function::getCenterNDC().y)*(static_cast<float>(yoffset)/10.0f));
         Function::multSize((1.0f-static_cast<float>(yoffset)/20.0f), (1.0f-static_cast<float>(yoffset)/20.0f));
         Function::setCenter(-lastValue/Function::getSize()+mousePos);
-        app->needUpdateShaders = true;
-        Function::allDirty = true;
-        RenderAxisNumbersPrecision::UpdatePrecision();
+        app->SetDirty();
     }
 }
 

@@ -34,6 +34,15 @@
 
 
 namespace Application {
+    namespace RenderAxisNumbersPrecision { //for calculation of precision for number on number axis
+        inline int xprecision = Function::numbersFloatPrecision;
+        inline int yprecision = Function::numbersFloatPrecision;
+        inline auto xformatting = std::fixed;
+        inline auto yformatting = std::fixed;
+
+        extern void UpdatePrecision();
+    }
+
     class App {
     private:
         glm::vec2 screenSize{900, 900};
@@ -113,6 +122,11 @@ namespace Application {
         inline static App* GetInstance() {
             return instance;
         }
+        inline void SetDirty() {
+            needUpdateShaders = true;
+            Function::allDirty = true;
+            RenderAxisNumbersPrecision::UpdatePrecision();
+        }
         inline glm::vec2 GetScreenSize() {
             return screenSize;
         }
@@ -123,13 +137,4 @@ namespace Application {
 
         ~App();
     };
-
-    namespace RenderAxisNumbersPrecision { //for calculation of precision for number on number axis
-        inline int xprecision = Function::numbersFloatPrecision;
-        inline int yprecision = Function::numbersFloatPrecision;
-        inline auto xformatting = std::fixed;
-        inline auto yformatting = std::fixed;
-
-        extern void UpdatePrecision();
-    }
 }
