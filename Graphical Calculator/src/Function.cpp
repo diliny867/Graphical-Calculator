@@ -10,16 +10,16 @@ Function::Function(): Function(800, 600) {}
 
 void Function::setFunction(const std::string& str) {
 	//std::cout<<str<<std::endl;
-	expr_str_parser.Parse(str);
+	exprStrParser.Parse(str);
 }
 
 glm::vec2 Function::calcPointScrPos(const glm::vec2 screenPos) {
 	std::lock_guard lg(m);
-	return {screenPos.x, (expr_str_parser.Calculate((screenPos.x-xcenter)*xsize)/ysize-ycenter)};
+	return {screenPos.x, (exprStrParser.Calculate((screenPos.x-xcenter)*xsize)/ysize-ycenter)};
 }
 float Function::calcAtScrPos(const glm::vec2 screenPos) {
 	std::lock_guard lg(m);
-	return expr_str_parser.Calculate((screenPos.x-xcenter)*xsize);
+	return exprStrParser.Calculate((screenPos.x-xcenter)*xsize);
 }
 
 
@@ -63,7 +63,7 @@ void Function::multCenter(const float delta_xcenter, const float delta_ycenter) 
 	//needs_update = true;
 }
 glm::vec2 Function::getCenter() {
-	return { xcenter, ycenter };
+	return {xcenter, ycenter};
 }
 glm::vec2 Function::getCenterNDC() {
 	return (glm::vec2(xcenter, ycenter)+1.0f)/2.0f;
@@ -74,12 +74,12 @@ void Function::recalculatePoints() {
 	if(recalcId == UINT32_MAX) {
 		recalcId = currentRecalculationId.fetch_add(1);
 	}
-	const float indent = 1.0f/(static_cast<float>(calc_points_count)/2.0f);
+	const float indent = 1.0f/(static_cast<float>(calcPointsCount)/2.0f);
 	float left = -xcenter-1.0f-indent;
 	std::lock_guard lg(m);
-	for (int i = 0; i<calc_points_count+2; i++) {
+	for (int i = 0; i<calcPointsCount+2; i++) {
 		if(completedRecalculationsMaxId.load()>=recalcId) {return;}
-		points[i] = glm::vec2((-1.0f-indent+static_cast<float>(i)*indent), static_cast<float>(expr_str_parser.Calculate(left * xsize)/ysize));
+		points[i] = glm::vec2((-1.0f-indent+static_cast<float>(i)*indent), static_cast<float>(exprStrParser.Calculate(left * xsize)/ysize));
 		left += indent;
 	}
 	completedRecalculationsMaxId.store(recalcId);

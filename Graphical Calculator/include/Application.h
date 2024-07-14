@@ -34,32 +34,8 @@
 
 
 namespace Application {
-    //callbacks and some other functions
-    //namespace GLFWCallbacks {
-    //    extern void framebuffer_size_callback(GLFWwindow* window, int width, int height);
-    //    extern void mouse_cursor_callback(GLFWwindow* window, double xpos, double ypos);
-    //    extern void mouse_scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
-    //    extern void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
-    //}
-    namespace RenderAxisNumbersPrecision { //for calculation of precision for number on number axis
-        inline int xprecision = Function::numbers_float_precision;
-        inline int yprecision = Function::numbers_float_precision;
-        inline auto xformatting = std::fixed;
-        inline auto yformatting = std::fixed;
-
-        extern void updatePrecision();
-    }
-
     class App {
     private:
-        void processInput(GLFWwindow* window);
-        void showFPS();
-        std::string getFPS_str(int precision);
-        std::function<void()> ViewpointUpdateShaderCallback;
-
-        
-        void RenderAxisNumbers(const Shader& shader, glm::vec2 center, glm::vec2 size, float scale, glm::vec3 color);
-
         glm::vec2 screenSize{900, 900};
         Mouse mouse{screenSize.x/2.0f, screenSize.y/2.0f};
         MouseDot mouseDot{};
@@ -73,7 +49,7 @@ namespace Application {
             GLuint vbo = 0;
             GLuint vao = 0;
             bool show = true;
-            bool need_remap_vbo = false;
+            bool needRemapVBO = false;
         };
         std::vector<FuncData*> functions;
 
@@ -99,31 +75,38 @@ namespace Application {
         } imGuiData = {};
 
         struct {
-            GLuint vao;
-            GLuint vbo;
+            GLuint coordAxisVAO;
+            //GLuint vbo;
             GLuint mouseDotVAO;
             GLuint mouseDotVBO;
         } mainGlObjects = {};
 
-        void CreateImGuiMenu();
-        void CreateMouseDot();
-
-        int GLInit();
-        int Init();
-
-        void Cleanup();
-
-        inline static App* instance = nullptr;
-    public:
-        inline static App* GetInstance() {
-            return instance;
-        }
         struct Callbacks{
             static void framebufferSizeCallback(GLFWwindow* window, int width, int height);
             static void mouseCursorCallback(GLFWwindow* window, double xpos, double ypos);
             static void mouseScrollCallback(GLFWwindow* window, double xoffset, double yoffset);
             static void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
         };
+
+        void processInput(GLFWwindow* window);
+        void showFPS();
+        std::string getFPS_str(int precision);
+        std::function<void()> ViewpointUpdateShaderCallback;
+
+        void renderAxisNumbers(const Shader& shader, glm::vec2 center, glm::vec2 size, float scale, glm::vec3 color);
+
+        void createImGuiMenu();
+        void createMouseDot();
+
+        int glInit();
+        int init();
+
+        inline static App* instance = nullptr;
+    public:
+        App();
+        inline static App* GetInstance() {
+            return instance;
+        }
         inline glm::vec2 GetScreenSize() {
             return screenSize;
         }
@@ -131,6 +114,16 @@ namespace Application {
             return mouse;
         }
         int Run();
+
+        ~App();
     };
 
+    namespace RenderAxisNumbersPrecision { //for calculation of precision for number on number axis
+        inline int xprecision = Function::numbers_float_precision;
+        inline int yprecision = Function::numbers_float_precision;
+        inline auto xformatting = std::fixed;
+        inline auto yformatting = std::fixed;
+
+        extern void updatePrecision();
+    }
 }

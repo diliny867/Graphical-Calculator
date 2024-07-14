@@ -21,7 +21,7 @@ void App::Callbacks::mouseCursorCallback(GLFWwindow*window,double xpos,double yp
             const float deltaY = yposIn-mouse.pos.y;
             Function::incCenter(deltaX/(app->screenSize.x/2.0f), deltaY/(app->screenSize.y/2.0f));
             app->needUpdateShaders = true;
-            Function::needs_update = true;
+            Function::allDirty = true;
         }
     }
 
@@ -46,7 +46,7 @@ void App::Callbacks::mouseButtonCallback(GLFWwindow*window,int button,int action
         case GLFW_MOUSE_BUTTON_LEFT:
             mouse.leftPressed = false;
             app->needUpdateShaders = true;
-            Function::needs_update = true;
+            Function::allDirty = true;
             break;
         case GLFW_MOUSE_BUTTON_RIGHT:
             mouse.rightPressed = false;
@@ -68,7 +68,7 @@ void App::Callbacks::mouseScrollCallback(GLFWwindow* window, const double xoffse
         Function::multSize((1.0f-static_cast<float>(yoffset)/20.0f), (1.0f-static_cast<float>(yoffset)/20.0f));
         Function::setCenter(-lastValue/Function::getSize()+mousePos);
         app->needUpdateShaders = true;
-        Function::needs_update = true;
+        Function::allDirty = true;
         RenderAxisNumbersPrecision::updatePrecision();
     }
 }

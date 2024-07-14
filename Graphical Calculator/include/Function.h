@@ -32,17 +32,16 @@ public:
 	inline static float xcenter = 0.0f; //functions center position
 	inline static float ycenter = 0.0f;
 
-	constexpr inline static int calc_points_count = 4000;
+	constexpr inline static int calcPointsCount = 4000;
 
-	inline static bool needs_update = false;
+	inline static bool allDirty = false;
+	bool dirty = false;
 
-	bool needs_personal_update = false;
-
-	ExprStrParser::Parser expr_str_parser;
+	ExprStrParser::Parser exprStrParser;
 
 	Function();
 	Function(int _screen_width, int _screen_height);
-	std::array<glm::vec2, calc_points_count+2>points;
+	std::array<glm::vec2, calcPointsCount+2>points;
 
 	void setFunction(const std::string& str);
 	glm::vec2 calcPointScrPos(glm::vec2 screenPos);
