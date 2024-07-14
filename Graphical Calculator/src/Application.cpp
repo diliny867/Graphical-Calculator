@@ -1,8 +1,27 @@
 #include "../include/Application.h"
 
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
+#include <imgui/imgui_impl_glfw.h>
+#include <imgui/imgui_impl_opengl3.h>
+#include <imgui/imgui_stdlib.h>
+
+#include <iostream>
+#include <iomanip>
+#include <sstream>
+
+#include "../myGL/VAO.h"
+#include "../myGL/VBO.h"
+#include "../myGL/Time.h"
+#include "../myGL/Texture2D.h"
+
+#include "../include/TextRender.h"
+
 using namespace Application;
 
 void App::pushNewFunction() { //creates and adds new empty function with random color
+    std::lock_guard lg(m);
     functions.push_back(new FuncData());
     VBO::generate(functions.back()->vbo, static_cast<GLsizeiptr>(Function::calcPointsCount*sizeof(glm::vec2)), functions.back()->function.points.data(), GL_DYNAMIC_DRAW);
     VAO::generate(functions.back()->vao);
@@ -10,6 +29,13 @@ void App::pushNewFunction() { //creates and adds new empty function with random 
     VAO::addAttrib(functions.back()->vao, 0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
     functions.back()->color = glm::vec3(static_cast<float>(rand())/(RAND_MAX), static_cast<float>(rand())/(RAND_MAX), static_cast<float>(rand())/(RAND_MAX));
     functions.back()->function.setFunction("");
+}
+void App::eraseFunction(const decltype(functions)::iterator& it) {
+    std::lock_guard lg(m);
+    VBO::deleteIt((*it)->vbo);
+    VAO::deleteIt((*it)->vao);
+    delete *it;
+    functions.erase(it);
 }
 
 void App::drawFunctions() {
@@ -43,8 +69,8 @@ void App::drawFunctions() {
 }
 void App::drawMouseDot() {
     if (mouseDot.funcCaptured) { //draw mouse dot and value at it
-        VAO::bind(mainGlObjects.mouseDotVAO);
-        VBO::setData(mainGlObjects.mouseDotVBO, sizeof(glm::vec2), &mouseDot.screenPos, GL_STATIC_DRAW);
+        VAO::bind(glData.mouseDotVAO);
+        VBO::setData(glData.mouseDotVBO, sizeof(glm::vec2), &mouseDot.screenPos, GL_STATIC_DRAW);
         glPointSize(7);
         shaders.mouseDotShader.use();
         glDrawArrays(GL_POINTS, 0, 1);
@@ -102,17 +128,12 @@ void App::createImGuiMenu() {
             shaders.mouseDotShader.setVec3("color", mouseDot.color);
         }
         if (ImGui::Button("Add new function")) {
-            std::lock_guard lg(m);
             pushNewFunction();
         }
         ImGui::SameLine();
         if (ImGui::Button("Remove last function")) {
             if (!functions.empty()) {
-                std::lock_guard lg(m);
-                VBO::deleteIt(functions.back()->vbo);
-                VAO::deleteIt(functions.back()->vao);
-                delete functions.back();
-                functions.pop_back();
+                eraseFunction(std::prev(functions.end()));
             }
         }
         for (std::size_t i = 0; i<functions.size(); i++) {
@@ -120,10 +141,7 @@ void App::createImGuiMenu() {
             auto& fFunction = function->function;
             const std::string id = std::to_string(i);
             if (ImGui::Button(("-##"+id).c_str())) {
-                VBO::deleteIt(function->vbo);
-                VAO::deleteIt(function->vao);
-                delete function;
-                functions.erase(functions.begin()+i);
+                eraseFunction(functions.begin()+i);
                 continue;
             }
             ImGui::SameLine();
@@ -161,11 +179,11 @@ void App::createImGuiMenu() {
             ImGui::ColorEdit3(("##"+id).c_str(), value_ptr(function->color), ImGuiColorEditFlags_NoInputs);
             ImGui::SameLine();
             if (ImGui::InputText(("##"+id).c_str(), &function->inputData)) {
-                auto last_args = fFunction.exprStrParser.GetArgs();
+                auto lastArgs = fFunction.exprStrParser.GetArgs();
                 fFunction.setFunction(function->inputData);
 
                 for (auto& arg: fFunction.exprStrParser.GetArgs()) {
-                    fFunction.exprStrParser.SetArgs(arg.first, last_args[arg.first]);
+                    fFunction.exprStrParser.SetArgs(arg.first, lastArgs[arg.first]);
                 }
                 function->futures.push({ std::async(std::launch::async, [&, i] {fFunction.recalculatePoints(); }) });
             }
@@ -310,14 +328,14 @@ void App::initShaders() {
     shaders.mouseDotShader = Shader("resources/shaders/mouseDot_vs.glsl","resources/shaders/mouseDot_fs.glsl");
 
     //setup projection and shader data
-    glm::mat4 projection = glm::ortho(0.0f, screenSize.x, 0.0f, screenSize.y);
+    glData.projection = glm::ortho(0.0f, screenSize.x, 0.0f, screenSize.y);
     shaders.coordAxisNumbersShader.use();
-    shaders.coordAxisNumbersShader.setMat4("projection", projection);
+    shaders.coordAxisNumbersShader.setMat4("projection", glData.projection);
     shaders.coordAxisNumbersShader.setVec2("center", Function::xcenter, Function::ycenter);
     shaders.coordAxisNumbersShader.setVec2("size", Function::xsize, Function::ysize);
     shaders.coordAxisNumbersShader.setVec2("updateOffset", 0.0f, 0.0f);
     shaders.textShader.use();
-    shaders.textShader.setMat4("projection", projection);
+    shaders.textShader.setMat4("projection", glData.projection);
 
     //setup function shader
     shaders.funcShader.use();
@@ -337,16 +355,6 @@ void App::initShaders() {
     glm::vec3 coordAxisGridColor = glm::vec3(0.2f);
     shaders.coordAxisShader.setVec3("centerColor", coordAxisCenterColor);
     shaders.coordAxisShader.setVec3("gridColor", coordAxisGridColor);
-
-    ViewpointUpdateShaderCallback = [&]() { //set up callback
-        shaders.funcShader.use();
-        shaders.funcShader.setVec2("resolution", screenSize.x, screenSize.y);
-        projection = glm::ortho(0.0f, screenSize.x, 0.0f, screenSize.y);
-        shaders.coordAxisNumbersShader.use();
-        shaders.coordAxisNumbersShader.setMat4("projection", projection);
-        shaders.textShader.use();
-        shaders.textShader.setMat4("projection", projection);
-    };
 }
 
 int App::init() {
@@ -372,20 +380,15 @@ int App::init() {
 
     initShaders();
 
-    //generate buffers for GPU
-    //GLuint vbo;
-    //VBO::generate(vbo, static_cast<GLsizeiptr>(Function::calc_points_count*sizeof(glm::vec2)), NULL, GL_DYNAMIC_DRAW);
-    //VBO::bind(vbo);
-    VAO::generate(mainGlObjects.coordAxisVAO);
-    VAO::bind(mainGlObjects.coordAxisVAO);
-    VAO::addAttrib(mainGlObjects.coordAxisVAO, 0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
-    //GLuint ebo;
-    //EBO::generate(ebo, sizeof(indices), indices, GL_STATIC_DRAW);
+    //generate some buffers for GPU
+    VAO::generate(glData.coordAxisVAO);
+    VAO::bind(glData.coordAxisVAO);
+    VAO::addAttrib(glData.coordAxisVAO, 0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
 
-    VBO::generate(mainGlObjects.mouseDotVBO, sizeof(glm::vec2), NULL, GL_STATIC_DRAW);
-    VAO::generate(mainGlObjects.mouseDotVAO);
-    VAO::bind(mainGlObjects.mouseDotVAO);
-    VAO::addAttrib(mainGlObjects.mouseDotVAO, 0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
+    VBO::generate(glData.mouseDotVBO, sizeof(glm::vec2), NULL, GL_STATIC_DRAW);
+    VAO::generate(glData.mouseDotVAO);
+    VAO::bind(glData.mouseDotVAO);
+    VAO::addAttrib(glData.mouseDotVAO, 0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
 
     //add first function
     pushNewFunction();
@@ -433,6 +436,17 @@ int App::Run() {
             updateFunctions = true;
         }
 
+        if(viewPointUpdated) {
+            shaders.funcShader.use();
+            shaders.funcShader.setVec2("resolution", screenSize.x, screenSize.y);
+            glData.projection = glm::ortho(0.0f, screenSize.x, 0.0f, screenSize.y);
+            shaders.coordAxisNumbersShader.use();
+            shaders.coordAxisNumbersShader.setMat4("projection", glData.projection);
+            shaders.textShader.use();
+            shaders.textShader.setMat4("projection", glData.projection);
+            viewPointUpdated = false;
+        }
+
         if (needUpdateShaders) { //update shaders
             shaders.coordAxisShader.use();
             shaders.coordAxisShader.setVec2("center", Function::xcenter, Function::ycenter);
@@ -446,21 +460,13 @@ int App::Run() {
         }
 
         glLineWidth(1);//draw coord axes
-        VAO::bind(mainGlObjects.coordAxisVAO);
+        VAO::bind(glData.coordAxisVAO);
         shaders.coordAxisShader.use();
         glDrawArrays(GL_POINTS, 0, 1);
 
-        VAO::bind(mainGlObjects.coordAxisVAO);
+        VAO::bind(glData.coordAxisVAO);
         shaders.coordAxisShader.use();
-        //if (viewpoint_updated) {
-        //    funcShader.use();
-        //    funcShader.setVec2("resolution", screenSize.x, screenSize.y);
-        //    projection = glm::ortho(0.0f, screenSize.x, 0.0f, screenSize.y);
-        //    coordAxisNumbersShader.use();
-        //    coordAxisNumbersShader.setMat4("projection", projection);
-        //    textShader.use();
-        //    textShader.setMat4("projection", projection);
-        //}
+
         renderAxisNumbers(shaders.coordAxisNumbersShader, Function::getCenter(), Function::getSize(), 0.25f, glm::vec3(0.7f)); //render numbers on number axis
 
         drawFunctions();

@@ -77,5 +77,6 @@ void App::Callbacks::framebufferSizeCallback(GLFWwindow* window, const int width
     app->screenSize.y = static_cast<float>(height);
     glViewport(0, 0, width, height);
     //0,0 - left bottom
-    app->ViewpointUpdateShaderCallback();
+    app->viewPointUpdated = true;
+    //app->ViewpointUpdateShaderCallback();
 }

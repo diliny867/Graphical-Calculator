@@ -1,5 +1,9 @@
 #include "../include/Function.h"
 
+#include <iostream>
+#include <functional>
+#include <sstream>
+
 using namespace Application;
 
 //Function::Function(const int _screen_width, const int _screen_height):screen_width(_screen_width), screen_height(_screen_height), xsize(10.0f), ysize(10.0f), xcenter(0.0f), ycenter(0.0f), needs_update(false)

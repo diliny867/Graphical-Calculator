@@ -44,7 +44,7 @@
   <ItemGroup>
     <ClInclude Include="include\Application.h" />
     <ClInclude Include="include\ExprStrParser.h" />
-    <ClInclude Include="include\ExprtStrTokenizer.h" />
+    <ClInclude Include="include\ExprStrTokenizer.h" />
     <ClInclude Include="include\Function.h" />
     <ClInclude Include="include\Mouse.h" />
     <ClInclude Include="include\TextRender.h" />

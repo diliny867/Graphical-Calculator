@@ -6,22 +6,22 @@
 #include <ft2build.h>
 #include FT_FREETYPE_H
 
-#include <map>
+#include <unordered_map>
 
+//Text rendering code source: https://learnopengl.com
 
 namespace Application {
-    struct Character {
-        GLuint TextureID; // ID handle of the glyph texture
-        glm::ivec2   Size;      // Size of glyph
-        glm::ivec2   Bearing;   // Offset from baseline to left/top of glyph
-        unsigned int Advance;   // Horizontal offset to advance to next glyph
-    };
-    inline std::map<GLchar, Character> Characters;
-    inline GLuint characterVAO, characterVBO;
-
 	namespace TextRender {
+        struct Character {
+            GLuint TextureID; // ID handle of the glyph texture
+            glm::ivec2   Size;      // Size of glyph
+            glm::ivec2   Bearing;   // Offset from baseline to left/top of glyph
+            unsigned int Advance;   // Horizontal offset to advance to next glyph
+        };
+        inline std::unordered_map<GLchar, Character> characters;
+        inline GLuint characterVAO, characterVBO;
+
 		inline int Init() {
-            //FreeType (thx https://learnopengl.com, copied from it)
             FT_Library ft;
             // All functions return a value different than 0 whenever an error occurred
             if (FT_Init_FreeType(&ft)) {
@@ -60,7 +60,7 @@ namespace Application {
                         glm::ivec2(face->glyph->bitmap_left, face->glyph->bitmap_top),
                         static_cast<unsigned int>(face->glyph->advance.x)
                     };
-                    Characters.insert(std::pair<char, Character>(c, character));
+                    characters.insert(std::pair<char, Character>(c, character));
                 }
                 Texture2D::unbind();
                 // glBindTexture(GL_TEXTURE_2D, 0);
@@ -93,7 +93,7 @@ namespace Application {
 
             // iterate through all characters
             for (std::string::const_iterator c = text.begin(); c < text.end(); ++c) {
-                const Character ch = Characters[*c];
+                const Character ch = characters[*c];
 
                 const float xpos = x + static_cast<float>(ch.Bearing.x) * scale;
                 const float ypos = y - static_cast<float>(ch.Size.y - ch.Bearing.y) * scale;

@@ -2,15 +2,10 @@
 
 #include <glm/glm.hpp>
 
-#include "../myGL/VBO.h"
-
-#include <iostream>
-#include <vector>
 #include <array>
-#include <functional>
-#include <sstream>
 #include <string>
 #include <mutex>
+
 #include "ExprStrParser.h"
 
 namespace Application{

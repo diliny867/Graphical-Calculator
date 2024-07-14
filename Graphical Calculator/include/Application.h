@@ -4,32 +4,16 @@
 #include <GLFW/glfw3.h>
 
 #include <glm/glm.hpp>//OpenGL Mathematics
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
 
 #include <imgui/imgui.h>
-#include <imgui/imgui_impl_glfw.h>
-#include <imgui/imgui_impl_opengl3.h>
-#include <imgui/imgui_stdlib.h>
 
-#include <iostream>
-#include <iomanip>
-#include <sstream>
 #include <string> 
 #include <future>
 #include <queue>
 
-
 #include "../myGL/Shader.h"
-#include "../myGL/VAO.h"
-#include "../myGL/VBO.h"
-//#include "../myGL/EBO.h" //unused
-#include "../myGL/Time.h"
-#include "../myGL/Texture2D.h"
-
 
 #include "../include/Function.h"
-#include "../include/TextRender.h"
 #include "../include/Mouse.h"
 
 
@@ -45,7 +29,11 @@ namespace Application {
 
     class App {
     private:
+        std::atomic_bool appOn = true;
+        std::mutex m;
+
         glm::vec2 screenSize{900, 900};
+
         Mouse mouse{screenSize.x/2.0f, screenSize.y/2.0f};
         MouseDot mouseDot{};
 
@@ -64,9 +52,7 @@ namespace Application {
 
         bool updateFunctions = true;
         bool needUpdateShaders = false;
-
-        std::atomic_bool appOn = true;
-        std::mutex m;
+        bool viewPointUpdated = false;
 
         GLFWwindow* appWindow = nullptr;
         ImGuiIO* imGuiIO = nullptr;
@@ -85,10 +71,10 @@ namespace Application {
 
         struct {
             GLuint coordAxisVAO;
-            //GLuint vbo;
             GLuint mouseDotVAO;
             GLuint mouseDotVBO;
-        } mainGlObjects = {};
+            glm::mat4 projection;
+        } glData = {};
 
         struct Callbacks{
             static void framebufferSizeCallback(GLFWwindow* window, int width, int height);
@@ -100,11 +86,11 @@ namespace Application {
         void processInput(GLFWwindow* window);
         void showFPS();
         std::string getFPS_str(int precision);
-        std::function<void()> ViewpointUpdateShaderCallback;
 
         void renderAxisNumbers(const Shader& shader, glm::vec2 center, glm::vec2 size, float scale, glm::vec3 color);
 
         void pushNewFunction();
+        void eraseFunction(const decltype(functions)::iterator& it); // because i can
 
         void drawFunctions();
         void drawMouseDot();
