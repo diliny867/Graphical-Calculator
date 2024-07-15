@@ -23,10 +23,6 @@ namespace ExprStrParser { //TODO: Fix comma
 		}
 	}
 
-	void Expression::calcFunc(const Node* tree) {
-		expr = calcNodes(tree);
-	}
-
 	std::function<double()>* Expression::GetInternalFunction() {
 		return &expr;
 	}
@@ -55,6 +51,7 @@ namespace ExprStrParser { //TODO: Fix comma
 				};
 			} else {
 				const std::string func_name = std::string(curr_token.val);
+				other_vars->try_emplace(func_name, 0.0);
 				return [=]() {return (*other_vars)[func_name]; };
 			}
 		}
@@ -108,9 +105,15 @@ namespace ExprStrParser { //TODO: Fix comma
 				return [=]() {return std::abs(calculated_nodes[0]()); };
 			}
 			if (str_compare(curr_token.val, "mod")) {
+				if(node->node_count<2) {
+					return []() { return std::numeric_limits<double>::quiet_NaN();};
+				}
 				return [=]() {return std::fmod(calculated_nodes[0](), calculated_nodes[1]()); };
 			}
 			if (str_compare(curr_token.val, "logn")) {
+				if(node->node_count<2) {
+					return []() { return std::numeric_limits<double>::quiet_NaN();};
+				}
 				return [=]() {return std::log(calculated_nodes[0]())/std::log(calculated_nodes[1]()); };
 			}
 			break;
@@ -126,6 +129,7 @@ namespace ExprStrParser { //TODO: Fix comma
 			tokenizer.tokens.clear();
 			return true;
 		} catch (std::exception& e) {
+			tree = nullptr;
 			tokenizer.tokens.clear();
 			return false;
 		}
@@ -274,18 +278,47 @@ namespace ExprStrParser { //TODO: Fix comma
 		tokenizer.Tokenize(str);
 		curr_expression.other_vars->clear();
 		if (buildTokenTree()) {
-			curr_expression.calcFunc(tree);
+			curr_expression.CalcFunc(tree);
 		}else {
 			curr_expression.expr = []() {return std::numeric_limits<double>::quiet_NaN(); };
 		}
-		//tree.print("",false);
+		curr_expression.tree = tree;
+		//if(tree != nullptr){
+		//	tree->print("", false);
+		//}
 	}
 
 	Expression Parser::CopyExpression() {
-		return curr_expression;
+		return curr_expression.Copy();
 	}
 
-	std::map<std::string, double> Expression::GetArgs() {
+	Expression::Expression() {
+		other_vars = new std::unordered_map<std::string, double>();
+		x_var = &(*other_vars)["x"];
+	}
+	Expression::Expression(const std::unordered_map<std::string, double>* args) {
+		other_vars = new std::unordered_map<std::string, double>(*args);
+		x_var = &(*other_vars)["x"];
+	}
+	Expression Expression::Copy() {
+		Expression expression(other_vars);
+		expression.tree = tree;
+		expression.CalcFunc(tree);
+		return expression;
+	}
+
+	void Expression::CalcFunc(Node* tree_) {
+		tree = tree_;
+		expr = calcNodes(tree);
+	}
+
+	double Expression::GetArg(const std::string& name) {
+		if(name == "x") {
+			return *x_var;
+		}
+		return (*other_vars)[name];
+	}
+	std::unordered_map<std::string, double> Expression::GetArgs() {
 		return *other_vars;
 	}
 	void Expression::SetArgs(const double x) {
@@ -294,7 +327,7 @@ namespace ExprStrParser { //TODO: Fix comma
 	void Expression::SetArgs(const std::string& name, const double value) {
 		(*other_vars)[name] = value;
 	}
-	void Expression::SetArgs(const std::map<std::string, double>& args) {
+	void Expression::SetArgs(const std::unordered_map<std::string, double>& args) {
 		*other_vars = args;
 	}
 	double Expression::Calculate() {
@@ -308,12 +341,12 @@ namespace ExprStrParser { //TODO: Fix comma
 		(*other_vars)[name] = value;
 		return expr();
 	}
-	double Expression::Calculate(const std::map<std::string, double>& args) {
+	double Expression::Calculate(const std::unordered_map<std::string, double>& args) {
 		*other_vars = args;
 		return expr();
 	}
 
-	std::map<std::string, double> Parser::GetArgs() {
+	std::unordered_map<std::string, double> Parser::GetArgs() {
 		return curr_expression.GetArgs();
 	}
 	void Parser::SetArgs(const double x) {
@@ -322,7 +355,7 @@ namespace ExprStrParser { //TODO: Fix comma
 	void Parser::SetArgs(const std::string& name, const double value) {
 		curr_expression.SetArgs(name, value);
 	}
-	void Parser::SetArgs(const std::map<std::string, double>& args) {
+	void Parser::SetArgs(const std::unordered_map<std::string, double>& args) {
 		curr_expression.SetArgs(args);
 	}
 	double Parser::Calculate() {
@@ -334,7 +367,7 @@ namespace ExprStrParser { //TODO: Fix comma
 	double Parser::Calculate(const std::string& name, const double value) {
 		return curr_expression.Calculate(name,value);
 	}
-	double Parser::Calculate(const std::map<std::string, double>& args) {
+	double Parser::Calculate(const std::unordered_map<std::string, double>& args) {
 		return curr_expression.Calculate(args);
 	}
 }
