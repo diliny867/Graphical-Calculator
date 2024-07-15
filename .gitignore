@@ -364,5 +364,3 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
-/Graphical Calculator/src/FunctionSystem.cpp
-/Graphical Calculator/include/FunctionSystem.h

@@ -43,6 +43,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\Application.h" />
+    <ClInclude Include="include\Common.h" />
     <ClInclude Include="include\ExprStrParser.h" />
     <ClInclude Include="include\ExprStrTokenizer.h" />
     <ClInclude Include="include\Function.h" />

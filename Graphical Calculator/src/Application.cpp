@@ -139,54 +139,57 @@ void App::createImGuiMenu() {
         for (std::size_t i = 0; i<functions.size(); i++) {
             auto& function = functions[i];
             auto& fFunction = function->function;
-            const std::string id = std::to_string(i);
-            if (ImGui::Button(("-##"+id).c_str())) {
+            ImGui::PushID((int)i);
+            if (ImGui::Button("-")) {
                 eraseFunction(functions.begin()+i);
                 continue;
             }
             ImGui::SameLine();
             if (function->show) {
-                if (ImGui::Button(("hide##"+id).c_str())) {
+                if (ImGui::Button("hide")) {
                     function->show = false;
                 }
             } else {
-                if (ImGui::Button(("show##"+id).c_str())) {
+                if (ImGui::Button("show")) {
                     function->show = true;
                 }
             }
             ImGui::SameLine();
-            if (ImGui::Button(("Variables##"+id).c_str())) {
+            if (ImGui::Button("Variables")) {
                 if (!fFunction.exprStrParser.GetArgs().empty()) {
-                    ImGui::OpenPopup(("Variables##"+id).c_str());
+                    ImGui::OpenPopup("Variables");
                 }
             }
-            if (ImGui::BeginPopup(("Variables##"+id).c_str())) {
-                for (auto& arg: fFunction.exprStrParser.GetArgs()) {
-                    if (ImGui::InputDouble((arg.first+"##Input").c_str(), &arg.second)) {
-                        fFunction.exprStrParser.SetArgs(arg.first,arg.second);
+            if (ImGui::BeginPopup("Variables")) {
+                for (auto&[argName, argValue]: fFunction.exprStrParser.GetArgs()) {
+                    ImGui::PushID((int)i+1);
+                    if (ImGui::InputDouble(argName.c_str(), &argValue)) {
+                        fFunction.exprStrParser.SetArgs(argName,argValue);
                         fFunction.dirty = true;
                     }
+                    ImGui::PopID();
                     ImGui::SameLine();
-                    const float inc = abs(arg.second/10.0f);
-                    if (ImGui::DragScalar((arg.first+"##Drag").c_str(), ImGuiDataType_Double, &arg.second, inc==0.0f?0.001f:(inc>1000.0f?1000.0f:inc))) {
-                        fFunction.exprStrParser.SetArgs(arg.first,arg.second);
+                    const float inc = abs(argValue/10.0f);
+                    if (ImGui::DragScalar(argName.c_str(), ImGuiDataType_Double, &argValue, inc==0.0f?0.001f:(inc>1000.0f?1000.0f:inc))) {
+                        fFunction.exprStrParser.SetArgs(argName,argValue);
                         fFunction.dirty = true;
                     }
                 }
                 ImGui::EndPopup();
             }
             ImGui::SameLine();
-            ImGui::ColorEdit3(("##"+id).c_str(), value_ptr(function->color), ImGuiColorEditFlags_NoInputs);
+            ImGui::ColorEdit3("", value_ptr(function->color), ImGuiColorEditFlags_NoInputs);
             ImGui::SameLine();
-            if (ImGui::InputText(("##"+id).c_str(), &function->inputData)) {
-                auto lastArgs = fFunction.exprStrParser.GetArgs();
+            if (ImGui::InputText("", &function->inputData)) {
+                //auto lastArgs = fFunction.exprStrParser.GetArgs();
                 fFunction.setFunction(function->inputData);
 
-                for (auto& arg: fFunction.exprStrParser.GetArgs()) {
-                    fFunction.exprStrParser.SetArgs(arg.first, lastArgs[arg.first]);
-                }
+                //for (auto& arg: fFunction.exprStrParser.GetArgs()) {
+                //    fFunction.exprStrParser.SetArgs(arg.first, lastArgs[arg.first]);
+                //}
                 function->futures.push({ std::async(std::launch::async, [&, i] {fFunction.recalculatePoints(); }) });
             }
+            ImGui::PopID();
         }
     }
     ImGui::End();
