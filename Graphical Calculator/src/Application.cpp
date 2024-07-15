@@ -23,7 +23,7 @@ using namespace Application;
 void App::pushNewFunction() { //creates and adds new empty function with random color
     std::lock_guard lg(m);
     functions.push_back(new FuncData());
-    VBO::generate(functions.back()->vbo, static_cast<GLsizeiptr>(Function::calcPointsCount*sizeof(glm::vec2)), functions.back()->function.points.data(), GL_DYNAMIC_DRAW);
+    VBO::generate(functions.back()->vbo, static_cast<GLsizeiptr>((Function::calcPointsCount+2)*sizeof(glm::vec2)), functions.back()->function.points.data(), GL_DYNAMIC_DRAW);
     VAO::generate(functions.back()->vao);
     VAO::bind(functions.back()->vao);
     VAO::addAttrib(functions.back()->vao, 0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
@@ -56,14 +56,14 @@ void App::drawFunctions() {
         if (function->needRemapVBO) {
             VBO::bind(function->vbo);
             void* ptr = glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
-            memcpy(ptr, function->function.points.data(), Function::calcPointsCount*sizeof(glm::vec2)); //copy points data to vbo
+            memcpy(ptr, function->function.points.data(), (Function::calcPointsCount+2)*sizeof(glm::vec2)); //copy points data to vbo
             glUnmapBuffer(GL_ARRAY_BUFFER);
             function->needRemapVBO = false;
         }
 
         VAO::bind(function->vao);
         shaders.funcShader.setVec3("color", function->color);
-        glDrawArrays(GL_LINE_STRIP_ADJACENCY, 0, static_cast<GLsizei>(Function::calcPointsCount));
+        glDrawArrays(GL_LINE_STRIP_ADJACENCY, 1, static_cast<GLsizei>(Function::calcPointsCount+2)); // 2 side points are offscreen
     }
     Function::allDirty = false;
 }
@@ -199,7 +199,7 @@ glm::vec2 getClosestPointOfLine(const glm::vec2& point, const glm::vec2& lineX1,
     return lineX1 + lx1Tolx2 * t; //basically lerp
 };
 void App::createMouseDot() {
-    constexpr auto setFinalOnScreenPoint = [](const glm::vec2& target, const glm::vec2& middle, const glm::vec2& prev, const glm::vec2& next) -> glm::vec2 {
+    constexpr auto getFinalOnScreenPoint = [](const glm::vec2& target, const glm::vec2& middle, const glm::vec2& prev, const glm::vec2& next) -> glm::vec2 {
         const auto p1 = getClosestPointOfLine(target, middle, prev);
         const auto p2 = getClosestPointOfLine(target, middle, next);
         if(glm::distance(target, p1) < glm::distance(target, p2)) {
@@ -224,9 +224,8 @@ void App::createMouseDot() {
                         //for (const glm::vec2 point : mouseDot.func->points) {
                         for(std::size_t i = 0; i < mouseDot.func->points.size(); i++) {
                             const glm::vec2& point = mouseDot.func->points[i];
-                            const glm::vec2 pointPos = {point.x,point.y};
-                            if (glm::distance(mousePos, pointPos) < glm::distance(mousePos, closestPoint)) {
-                                closestPoint = pointPos;
+                            if (glm::distance(mousePos, point) < glm::distance(mousePos, closestPoint)) {
+                                closestPoint = point;
                                 closestAt = i;
                             }
                         }
@@ -234,7 +233,7 @@ void App::createMouseDot() {
                         if(closestAt == 0 || closestAt == mouseDot.func->points.size() - 1) {
                             mouseDot.screenPos = closestPoint - scrOffsetY;
                         } else{
-                            mouseDot.screenPos = setFinalOnScreenPoint(closestPoint, 
+                            mouseDot.screenPos = getFinalOnScreenPoint(closestPoint, 
 								mouseDot.func->points[closestAt], mouseDot.func->points[closestAt-1], mouseDot.func->points[closestAt+1]) - scrOffsetY;
                         }
                     }else {
@@ -249,9 +248,8 @@ void App::createMouseDot() {
                             //for(const auto& point: func->function.points) {
                             for(std::size_t i = 0; i < func->function.points.size(); i++) {
                                 const glm::vec2& point = func->function.points[i];
-                                const glm::vec2 pointPos = {point.x,point.y};
-                                if(glm::distance(mousePos, pointPos) < glm::distance(mousePos, closestPoint)) {
-                                    closestPoint = pointPos;
+                                if(glm::distance(mousePos, point) < glm::distance(mousePos, closestPoint)) {
+                                    closestPoint = point;
                                     mouseDot.func = &func->function;
                                     closestAt = i;
                                 }
@@ -261,7 +259,7 @@ void App::createMouseDot() {
                                 if(closestAt == 0 || closestAt == mouseDot.func->points.size() - 1) {
                                     mouseDot.screenPos = closestPoint - scrOffsetY;
                                 } else{
-                                    mouseDot.screenPos = setFinalOnScreenPoint(closestPoint, 
+                                    mouseDot.screenPos = getFinalOnScreenPoint(closestPoint, 
 										mouseDot.func->points[closestAt], mouseDot.func->points[closestAt-1], mouseDot.func->points[closestAt+1]) - scrOffsetY;
                                 }
                                 mouseDot.funcCaptured = true;
