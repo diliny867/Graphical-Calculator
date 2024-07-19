@@ -4,6 +4,7 @@ using namespace Application;
 
 void App::Callbacks::mouseCursorCallback(GLFWwindow*window,double xpos,double ypos) {
     auto app = App::GetInstance();
+    auto fs = FunctionSystem::GetInstance();
     Mouse& mouse = app->mouse;
 
     const float xposIn = static_cast<float>(xpos);
@@ -19,9 +20,9 @@ void App::Callbacks::mouseCursorCallback(GLFWwindow*window,double xpos,double yp
         if(mouse.leftPressed) {
             const float deltaX = xposIn-mouse.pos.x;
             const float deltaY = yposIn-mouse.pos.y;
-            Function::incCenter(deltaX/(app->screenSize.x/2.0f), deltaY/(app->screenSize.y/2.0f));
+            fs->IncCenter({deltaX/(app->screenSize.x/2.0f), deltaY/(app->screenSize.y/2.0f)});
             app->needUpdateShaders = true;
-            Function::allDirty = true;
+            FunctionSystem::allDirty = true;
         }
     }
 
@@ -46,7 +47,7 @@ void App::Callbacks::mouseButtonCallback(GLFWwindow*window,int button,int action
         case GLFW_MOUSE_BUTTON_LEFT:
             mouse.leftPressed = false;
             app->needUpdateShaders = true;
-            Function::allDirty = true;
+            FunctionSystem::allDirty = true;
             break;
         case GLFW_MOUSE_BUTTON_RIGHT:
             mouse.rightPressed = false;
@@ -57,16 +58,17 @@ void App::Callbacks::mouseButtonCallback(GLFWwindow*window,int button,int action
 
 void App::Callbacks::mouseScrollCallback(GLFWwindow* window, const double xoffset, const double yoffset) {
     auto app = App::GetInstance();
+    auto fs = FunctionSystem::GetInstance();
     Mouse& mouse = app->mouse;
     mouse.wheelScrolled = true;
     if(app->updateFunctions) {//scale functions
         const glm::vec2 mousePos = glm::vec2(mouse.pos.x/app->screenSize.x*2.0f-1.0f, mouse.pos.y/app->screenSize.y*2.0f-1.0f);
-        const glm::vec2 lastValue = (-Function::getCenter()+mousePos)*Function::getSize();
+        const glm::vec2 lastValue = (-fs->GetCenter()+mousePos)*fs->GetSize();
         //const glm::vec2 lastCenterValue = (Function::getCenter()+glm::vec2(mouse.pos.x/screenSize.x*2-1, mouse.pos.y/screenSize.y*2-1))*Function::getSize();
         //Function::incCenter(-(mouse.pos.x/screenSize.x -Function::getCenterNDC().x)*(static_cast<float>(yoffset)/10.0f),
         //					-(mouse.pos.y/screenSize.y-Function::getCenterNDC().y)*(static_cast<float>(yoffset)/10.0f));
-        Function::multSize((1.0f-static_cast<float>(yoffset)/20.0f), (1.0f-static_cast<float>(yoffset)/20.0f));
-        Function::setCenter(-lastValue/Function::getSize()+mousePos);
+        fs->MultSize({(1.0f-static_cast<float>(yoffset)/20.0f), (1.0f-static_cast<float>(yoffset)/20.0f)});
+        fs->SetCenter(-lastValue/fs->GetSize()+mousePos);
         app->SetDirty();
     }
 }

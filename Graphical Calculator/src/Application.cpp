@@ -22,6 +22,7 @@ using namespace Application;
 
 void App::pushNewFunction() { //creates and adds new empty function with random color
     std::lock_guard lg(m);
+    auto& functions = functionSystem.functions;
     functions.push_back(new FuncData());
     VBO::generate(functions.back()->vbo, static_cast<GLsizeiptr>((Function::calcPointsCount+2)*sizeof(glm::vec2)), functions.back()->function.points.data(), GL_DYNAMIC_DRAW);
     VAO::generate(functions.back()->vao);
@@ -30,8 +31,9 @@ void App::pushNewFunction() { //creates and adds new empty function with random 
     functions.back()->color = glm::vec3(static_cast<float>(rand())/(RAND_MAX), static_cast<float>(rand())/(RAND_MAX), static_cast<float>(rand())/(RAND_MAX));
     functions.back()->function.setFunction("");
 }
-void App::eraseFunction(const decltype(functions)::iterator& it) {
+void App::eraseFunction(const decltype(functionSystem.functions)::iterator& it) {
     std::lock_guard lg(m);
+    auto& functions = functionSystem.functions;
     VBO::deleteIt((*it)->vbo);
     VAO::deleteIt((*it)->vao);
     delete *it;
@@ -39,12 +41,13 @@ void App::eraseFunction(const decltype(functions)::iterator& it) {
 }
 
 void App::drawFunctions() {
+    auto& functions = functionSystem.functions;
     glLineWidth(3);
     shaders.funcShader.use();
     for (std::size_t i = 0; i<functions.size(); i++) { //check if function recalculated and draw it
         auto& function = functions[i];
         if (!function->show) { continue; }
-        if (Function::allDirty || function->function.dirty) {
+        if (FunctionSystem::allDirty || function->function.dirty) {
             function->futures.push({ std::async(std::launch::async, [&, i] {function->function.recalculatePoints(); }) });
             function->function.dirty = false;
         }
@@ -65,7 +68,7 @@ void App::drawFunctions() {
         shaders.funcShader.setVec3("color", function->color);
         glDrawArrays(GL_LINE_STRIP_ADJACENCY, 1, static_cast<GLsizei>(Function::calcPointsCount+2)); // 2 side points are offscreen
     }
-    Function::allDirty = false;
+    FunctionSystem::allDirty = false;
 }
 void App::drawMouseDot() {
     if (mouseDot.funcCaptured) { //draw mouse dot and value at it
@@ -74,12 +77,14 @@ void App::drawMouseDot() {
         glPointSize(7);
         shaders.mouseDotShader.use();
         glDrawArrays(GL_POINTS, 0, 1);
-        const std::string dotText = std::to_string(Function::xsize*(mouseDot.screenPos.x-Function::xcenter)) + " " + std::to_string(mouseDot.func->calcAtScrPos(mouseDot.screenPos));
+        const std::string dotText = std::to_string(functionSystem.GetSize().x*(mouseDot.screenPos.x-functionSystem.GetCenter().x)) + " " + std::to_string(mouseDot.func->calcAtScrPos(mouseDot.screenPos));
         TextRender::RenderText(shaders.textShader, dotText, screenSize.x*(mouseDot.screenPos.x+1.0f)*0.5f+10.0f, screenSize.y*(mouseDot.screenPos.y+1.0f)*0.5f, 0.3f, glm::vec3(0.7f));
     }
 }
 
 void App::createImGuiMenu() {
+    auto& functions = functionSystem.functions;
+
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
@@ -87,37 +92,37 @@ void App::createImGuiMenu() {
     ImGui::Begin("Menu");
     { //draw GUI with ImGUI
         if (ImGui::Button("Home")) {
-            Function::setSize(10.0f, 10.0f);
-            Function::setCenter(0.0f, 0.0f);
+            functionSystem.SetSize({10.0f, 10.0f});
+            functionSystem.SetCenter({0.0f, 0.0f});
             SetDirty();
         }
         ImGui::SameLine();
         if (ImGui::Button("+")) {
-            Function::multSize(1.0f-imGuiData.buttonsInc, 1.0f-imGuiData.buttonsInc);
+            functionSystem.MultSize({1.0f-imGuiData.buttonsInc, 1.0f-imGuiData.buttonsInc});
             SetDirty();
         }
         ImGui::SameLine();
         if (ImGui::Button("-")) {
-            Function::multSize(1.0f+imGuiData.buttonsInc, 1.0f+imGuiData.buttonsInc);
+            functionSystem.MultSize({1.0f+imGuiData.buttonsInc, 1.0f+imGuiData.buttonsInc});
             SetDirty();
         }
         if (ImGui::Button("X +")) {
-            Function::multSize(1.0f-imGuiData.buttonsInc, 1.0f);
+            functionSystem.MultSize({1.0f-imGuiData.buttonsInc, 1.0f});
             SetDirty();
         }
         ImGui::SameLine();
         if (ImGui::Button("X -")) {
-            Function::multSize(1.0f+imGuiData.buttonsInc, 1.0f);
+            functionSystem.MultSize({1.0f+imGuiData.buttonsInc, 1.0f});
             SetDirty();
         }
         ImGui::SameLine();
         if (ImGui::Button("Y +")) {
-            Function::multSize(1.0f, 1.0f-imGuiData.buttonsInc);
+            functionSystem.MultSize({1.0f, 1.0f-imGuiData.buttonsInc});
             SetDirty();
         }
         ImGui::SameLine();
         if (ImGui::Button("Y -")) {
-            Function::multSize(1.0f, 1.0f+imGuiData.buttonsInc);
+            functionSystem.MultSize({1.0f, 1.0f+imGuiData.buttonsInc});
             SetDirty();
         }
         //ImGui::Text("\n"); //somehow this makes indent smaller than " "
@@ -202,6 +207,8 @@ glm::vec2 getClosestPointOfLine(const glm::vec2& point, const glm::vec2& lineX1,
     return lineX1 + lx1Tolx2 * t; //basically lerp
 };
 void App::createMouseDot() {
+    auto& functions = functionSystem.functions;
+
     constexpr auto getFinalOnScreenPoint = [](const glm::vec2& target, const glm::vec2& middle, const glm::vec2& prev, const glm::vec2& next) -> glm::vec2 {
         const auto p1 = getClosestPointOfLine(target, middle, prev);
         const auto p2 = getClosestPointOfLine(target, middle, next);
@@ -213,10 +220,10 @@ void App::createMouseDot() {
     };
     shaders.mouseDotShader.use();
     shaders.mouseDotShader.setVec3("color", mouseDot.color);
-    mouseDot.thread = new std::thread([&]() { //thread that calculates poin for mouse
+    mouseDot.thread = new std::thread([&]() { //thread that calculates point for mouse
         bool lastLeftPressed = false;
         while (appOn) {
-            glm::vec2 scrOffsetY = glm::vec2{0, Function::ycenter};
+            glm::vec2 scrOffsetY = glm::vec2{0, functionSystem.GetCenter().y};
             if (mouse.leftPressed) {
                 if (imGuiIO->WantCaptureMouse) {continue;}
                 const glm::vec2 mousePos = glm::vec2(mouse.pos.x / screenSize.x * 2.0f - 1.0f, -(mouse.pos.y / screenSize.y * 2.0f - 1.0f)) + scrOffsetY;
@@ -328,12 +335,15 @@ void App::initShaders() {
     shaders.textShader = Shader("resources/shaders/textShader_vs.glsl", "resources/shaders/textShader_fs.glsl");
     shaders.mouseDotShader = Shader("resources/shaders/mouseDot_vs.glsl","resources/shaders/mouseDot_fs.glsl");
 
+    const glm::vec2 fsCenter = functionSystem.GetCenter();
+    const glm::vec2 fsSize= functionSystem.GetSize();
+
     //setup projection and shader data
     glData.projection = glm::ortho(0.0f, screenSize.x, 0.0f, screenSize.y);
     shaders.coordAxisNumbersShader.use();
     shaders.coordAxisNumbersShader.setMat4("projection", glData.projection);
-    shaders.coordAxisNumbersShader.setVec2("center", Function::xcenter, Function::ycenter);
-    shaders.coordAxisNumbersShader.setVec2("size", Function::xsize, Function::ysize);
+    shaders.coordAxisNumbersShader.setVec2("center", fsCenter);
+    shaders.coordAxisNumbersShader.setVec2("size", fsSize);
     shaders.coordAxisNumbersShader.setVec2("updateOffset", 0.0f, 0.0f);
     shaders.textShader.use();
     shaders.textShader.setMat4("projection", glData.projection);
@@ -342,7 +352,7 @@ void App::initShaders() {
     shaders.funcShader.use();
     //constexpr float markerSize = 0.0f;
     //funcShader.setFloat("markerRadius", markerSize);
-    shaders.funcShader.setVec2("resolution", screenSize.x, screenSize.y);
+    shaders.funcShader.setVec2("resolution", screenSize);
     shaders.funcShader.setFloat("ycenter", 0.0f);
     shaders.funcShader.setVec3("color", glm::vec3(1.0f)); //desmos color: glm::vec3(199.0f, 68.0f, 64.0f)/255.0f
     //glUniform2fv(glGetUniformLocation(funcShader.id, "vPoints"), static_cast<GLsizei>(function.points.size()), reinterpret_cast<float*>(function.points.data()));
@@ -350,7 +360,7 @@ void App::initShaders() {
     //setup coordinate axis shader
     shaders.coordAxisShader.use();
     shaders.coordAxisShader.setVec2("center", 0.0f, 0.0f);
-    shaders.coordAxisShader.setVec2("size", Function::xsize, Function::ysize);
+    shaders.coordAxisShader.setVec2("size", fsSize);
     //coordAxisShader.setFloat("gridSize", 10.0f);
     glm::vec3 coordAxisCenterColor = glm::vec3(0.5f);
     glm::vec3 coordAxisGridColor = glm::vec3(0.2f);
@@ -448,15 +458,18 @@ int App::Run() {
             viewPointUpdated = false;
         }
 
+        const glm::vec2 fsCenter = functionSystem.GetCenter();
+        const glm::vec2 fsSize = functionSystem.GetSize();
+
         if (needUpdateShaders) { //update shaders
             shaders.coordAxisShader.use();
-            shaders.coordAxisShader.setVec2("center", Function::xcenter, Function::ycenter);
-            shaders.coordAxisShader.setVec2("size", Function::xsize, Function::ysize);
+            shaders.coordAxisShader.setVec2("center", fsCenter);
+            shaders.coordAxisShader.setVec2("size", fsSize);
             //coordAxisNumbersShader.use();
             //coordAxisNumbersShader.setVec2("center", Function::xcenter, Function::ycenter);
             //coordAxisNumbersShader.setVec2("size", Function::xsize, Function::ysize);
             shaders.funcShader.use();
-            shaders.funcShader.setFloat("ycenter", Function::ycenter);
+            shaders.funcShader.setFloat("ycenter", fsCenter.y);
             needUpdateShaders = false;
         }
 
@@ -468,7 +481,7 @@ int App::Run() {
         VAO::bind(glData.coordAxisVAO);
         shaders.coordAxisShader.use();
 
-        renderAxisNumbers(shaders.coordAxisNumbersShader, Function::getCenter(), Function::getSize(), 0.25f, glm::vec3(0.7f)); //render numbers on number axis
+        renderAxisNumbers(shaders.coordAxisNumbersShader, fsCenter, fsSize, 0.25f, glm::vec3(0.7f)); //render numbers on number axis
 
         drawFunctions();
 
@@ -524,7 +537,7 @@ void Application::RenderAxisNumbersPrecision::UpdatePrecision() {
     yprecision = Function::numbersFloatPrecision;
     xformatting = std::fixed;
     yformatting = std::fixed;
-    const glm::vec2 f_size = Function::getSize();
+    const glm::vec2 f_size = FunctionSystem::GetInstance()->GetSize();
     if (f_size.x<2.0f) {
         xprecision += 1;
         if (f_size.x<0.4f) {

@@ -13,6 +13,7 @@
 
 #include "../myGL/Shader.h"
 
+#include "../include/FunctionSystem.h"
 #include "../include/Function.h"
 #include "../include/Mouse.h"
 
@@ -37,18 +38,7 @@ namespace Application {
         Mouse mouse{screenSize.x/2.0f, screenSize.y/2.0f};
         MouseDot mouseDot{};
 
-        class FuncData {
-        public:
-            Function function;
-            std::string inputData;
-            std::queue<std::future<void>> futures;
-            glm::vec3 color = glm::vec3(1.0f);
-            GLuint vbo = 0;
-            GLuint vao = 0;
-            bool show = true;
-            bool needRemapVBO = false;
-        };
-        std::vector<FuncData*> functions;
+        FunctionSystem functionSystem = FunctionSystem(screenSize);
 
         bool updateFunctions = true;
         bool needUpdateShaders = false;
@@ -90,7 +80,7 @@ namespace Application {
         void renderAxisNumbers(const Shader& shader, glm::vec2 center, glm::vec2 size, float scale, glm::vec3 color);
 
         void pushNewFunction();
-        void eraseFunction(const decltype(functions)::iterator& it); // because i can
+        void eraseFunction(const decltype(functionSystem.functions)::iterator& it); // because i can
 
         void drawFunctions();
         void drawMouseDot();
@@ -110,7 +100,7 @@ namespace Application {
         }
         inline void SetDirty() {
             needUpdateShaders = true;
-            Function::allDirty = true;
+            FunctionSystem::allDirty = true;
             RenderAxisNumbersPrecision::UpdatePrecision();
         }
         inline glm::vec2 GetScreenSize() {

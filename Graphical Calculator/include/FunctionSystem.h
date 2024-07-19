@@ -12,32 +12,52 @@
 
 #include "Common.h"
 
-class FuncData {
-public:
-    Function function;
-    std::string inputData;
-    std::list<std::future<PointsBuf>> futures;
-    glm::vec3 color = glm::vec3(1.0f);
-    GLuint vbo = 0;
-    GLuint vao = 0;
-    bool show = true;
-};
-class FunctionSystem {
-public:
-    double funcPrecision = 0.5;
-    inline static double funcPrecisionMin = 0.005;
+namespace Application{
+    class FuncData {
+    public:
+        Function function;
+        std::string inputData;
+        std::queue<std::future<void>> futures;
+        glm::vec3 color = glm::vec3(1.0f);
+        GLuint vbo = 0;
+        GLuint vao = 0;
+        bool show = true;
+        bool needRemapVBO = false;
+    };
+    class FunctionSystem {
+    private:
+        std::mutex m;
+        glm::vec2 screen = {800,600};
+        glm::vec2 center = {0,0};
+        glm::vec2 size = {10,10};
 
-	glm::vec2 screen;
-	glm::vec2 center = {0,0};
-	glm::vec2 size = {10,10};
+        inline static FunctionSystem* instance = nullptr;
+    public:
+        int numbersFloatPrecision = 1;
 
-    int numbersFloatPrecision = 1;
+        inline static bool allDirty = false;
 
-    ExprStrParser::Parser exprStrParser;
+        ExprStrParser::Parser exprStrParser;
 
-    bool functionsNeedUpdate = false;
-    std::vector<FuncData*> functions;
+        std::vector<FuncData*> functions;
 
-	FunctionSystem(glm::vec2 screen_size);
+        void SetScreen(const glm::vec2& size);
+        glm::vec2 GetScreen();
+        void SetSize(const glm::vec2& size);
+        void IncSize(const glm::vec2& delta);
+        void MultSize(const glm::vec2& delta);
+        glm::vec2 GetSize();
+        void SetCenter(const glm::vec2& center);
+        void IncCenter(const glm::vec2& delta);
+        void MultCenter(const glm::vec2& delta);
+        glm::vec2 GetCenter();
+        glm::vec2 GetCenterNDC();
 
-};
+        FunctionSystem();
+        FunctionSystem(const glm::vec2& screenSize);
+
+        inline static FunctionSystem* GetInstance() {
+            return instance;
+        }
+    };
+}
